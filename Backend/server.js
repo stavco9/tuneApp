@@ -19,6 +19,10 @@ const spotifyStateKey = 'spotify_auth_state';
 
 const app = express();
 
+// Registering the artist routes
+var routes = require('./api/routes/artistsRoutes'); 
+routes(app);
+
 //app.use(session({ secret: 'anything' }));
 //app.use(passport.initialize());
 //app.use(passport.session());
