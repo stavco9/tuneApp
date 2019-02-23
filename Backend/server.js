@@ -11,6 +11,7 @@ const http = require('http');
 
 const googleAuthentication = require('./google-authentication');
 const spotifyAuthentication = require('./spotify-authentication');
+const mongoConnection = require('./mongo-connection');
 
 const hostname = '127.0.0.1';
 const port = 8080;
@@ -64,6 +65,9 @@ app.get('/home', (req, res) => {
     }
     else{
         res.setHeader('Content-Type', 'application/json');
+
+        mongoConnection.addToMongoDB('users', req.session.token);
+
         res.send(req.session.token);
     }
 });
