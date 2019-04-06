@@ -16,6 +16,7 @@ const googleConfig = {
 const defaultScope = [
     'https://www.googleapis.com/auth/plus.me',
     'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile'
 ];
 
 /*************/
@@ -80,13 +81,13 @@ module.exports = {
     const userGoogleGender = me.data.gender;
 
     return {
-        id: userGoogleId,
+        google_id: userGoogleId,
         email: userGoogleEmail,
         name: userGoogleName,
         first_name: userGoogleFname,
         last_name: userGoogleLname,
         gender: userGoogleGender,
-        image_url: userGoogleImage
+        google_image_url: userGoogleImage
     };
  }
 

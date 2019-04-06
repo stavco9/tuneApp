@@ -12,6 +12,8 @@ const http = require('http');
 const googleAuthentication = require('./google-authentication');
 const spotifyAuthentication = require('./spotify-authentication');
 const mongoConnection = require('./mongo-connection');
+//const artistsController = require('./api/controllers/artistsController');
+const tracksController = require('./api/controllers/tracksController');
 
 const hostname = '127.0.0.1';
 const port = 8080;
@@ -24,15 +26,11 @@ const app = express();
 var routes = require('./api/routes/artistsRoutes'); 
 routes(app);
 
-//app.use(session({ secret: 'anything' }));
-//app.use(passport.initialize());
-//app.use(passport.session());
-
 app.use(session({
     secret: 'keyboard cat',
     resave: false,
     saveUninitialized: true,
-    cookie: { maxAge: 120000 }
+    cookie:{ maxAge: 7200000}
     }))
 
 app.use(cookieParser());
@@ -55,7 +53,7 @@ app.get('/', (req, res) => {
     }
 });
 
-app.get('/home', (req, res) => {
+app.get('/home', async(req, res) => {
     res.statusCode = 200;
 
     var url = googleAuthentication.urlGoogle();
@@ -64,9 +62,41 @@ app.get('/home', (req, res) => {
         return res.redirect('/');
     }
     else{
+        if (!req.session.spotify_access_token){
+            return res.redirect('/get-spotify-token');   
+        }
+
         res.setHeader('Content-Type', 'application/json');
 
-        mongoConnection.addToMongoDB('users', req.session.token);
+        try{
+
+            if (!req.session.userDetailsFromDB){
+                req.session.userDetailsFromDB = mongoConnection.queryFromMongoDB('users', {'email': req.session.token.email});
+            }
+        
+            if (req.session.userDetailsFromDB.length < 1){
+                await mongoConnection.addToMongoDB('users', req.session.token);
+            }
+            else{                
+                if(req.session.token.hasOwnProperty('google_id')){
+                    if (!req.session.userDetailsFromDB[0].hasOwnProperty('google_id')){
+                        await mongoConnection.updateMongoDB('users', {'email': req.session.token.email}, req.session.token);
+                    }
+                }
+                else if(req.session.token.hasOwnProperty('spotify_id')){
+                    if (!req.session.userDetailsFromDB[0].hasOwnProperty('spotify_id')){
+                        await mongoConnection.updateMongoDB('users', {'email': req.session.token.email}, req.session.token);
+                    }
+                }
+            }
+        }
+        catch(error){
+            console.log(error);
+        }
+        
+        //artistsController.getAllArtists(req, res);
+
+        //tracksController.tracksPolling();
 
         res.send(req.session.token);
     }
@@ -87,6 +117,10 @@ app.get('/google-auth', async(req, res, next) => {
 app.get('/spotify-auth', (req, res, next) => {
     spotifyAuthentication.getAccessToken(req, res, next);
 }); 
+
+app.get('/get-spotify-token', (req, res) =>{
+    spotifyAuthentication.getAccessTokenForAPI(req, res);
+});
     
 
 app.listen(port, hostname, () => {

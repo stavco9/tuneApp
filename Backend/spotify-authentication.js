@@ -104,13 +104,14 @@ module.exports = {
           request.get(options, function(error, response, body) {
           // use the access token to access the Spotify Web API
             var userData = {
-              id: body.id,
+              spotify_id: body.id,
               country_code: body.country,
               email: body.email,
               name: body.display_name,
               first_name: body.display_name.split(' ')[0],
               last_name: body.display_name.split(' ')[1],
-              image_url: body.images[0].url
+              spotify_image_url: body.images[0].url,
+              access_token: access_token
             };
 
             req.session.token = userData;
@@ -125,8 +126,68 @@ module.exports = {
         }
       });
     }
+  },
+
+  getAccessTokenForAPI: function(req, res){
+    // your application requests refresh and access tokens
+// after checking the state parameter
+
+    var authOptions = {
+      url: 'https://accounts.spotify.com/api/token',
+      form: {
+        grant_type: 'client_credentials'
+      },
+      headers: {
+        'Authorization': 'Basic ' + (new Buffer(client_id + ':' + client_secret).toString('base64'))
+      },
+      json: true
+    };
+
+    request.post(authOptions, function(error, response, body) {
+      if (!error && response.statusCode === 200) {
+        var access_token = body.access_token;
+
+        req.session.spotify_access_token = access_token;
+
+        res.statusCode = 200;
+
+        res.redirect('/home');
+      } else {
+        console.log("invalid_token");
+      }
+    });
+  },
+
+  getAccessTokenForPolling: function(){
+    // your application requests refresh and access tokens
+// after checking the state parameter
+
+    var authOptions = {
+      url: 'https://accounts.spotify.com/api/token',
+      form: {
+        grant_type: 'client_credentials'
+      },
+      headers: {
+        'Authorization': 'Basic ' + (new Buffer(client_id + ':' + client_secret).toString('base64'))
+      },
+      json: true
+    };
+
+    return new Promise(function(resolve, reject){
+      request.post(authOptions, function(error, response, body) {
+        if (!error && response.statusCode === 200) {
+          var access_token = body.access_token;
+
+          resolve(access_token);
+        } else {
+          reject(error);
+        }
+      })
+    })
   }
+
 }
+
 
 app.get('/refresh_token', function(req, res) {
 

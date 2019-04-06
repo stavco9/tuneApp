@@ -20,7 +20,7 @@ module.exports = function(app) {
   app.use(cookieParser());
 
   // artistsController Routes
-  app.route('/artists')
+  app.route('/tracks')
     .get(async function(req, res){
       if (!req.session.spotify_access_token){
         return res.redirect('/');
@@ -31,7 +31,7 @@ module.exports = function(app) {
     .post(artistsController.AddNewArtist);
 
 
-  app.route('/artists/:artistId')
+  app.route('/tracks/:trackId')
     .get(artistsController.GetArtistById)
     .put(artistsController.UpdateArtistById)
     .delete(artistsController.DeleteArtistById);

@@ -1,25 +1,95 @@
 var MongoClient = require('mongodb').MongoClient;
-var url = "mongodb://tune-dev-mdb.westeurope.cloudapp.azure.com:27017/tuneApp";
+
+require('dotenv').config({path: __dirname+'/tuneApp.env'});
+
+var url = process.env.CONNECTION_URL + process.env.COLLECTION_NAME; //"mongodb://tune-dev-mdb.westeurope.cloudapp.azure.com:27017/tuneApp";
 const express = require('express');
 const session = require('express-session');
 const app = require('./server');
 
-module.exports = {
-    addToMongoDB: function(collectionName, jsonData){
-        MongoClient.connect(url, function(err, db) {
-            if (err) throw err;
+async function queryFromMongoDB(collectionName, queryField, callback){
+    
+    try{
+        const db = await MongoClient.connect(url);
+        
+        console.log("Connected to database");
+
+        var dbo = db.db(process.env.COLLECTION_NAME);
             
-            console.log("Connected to database");
-
-            var dbo = db.db("tuneApp");
-            
-            dbo.collection(collectionName).insertOne(jsonData, function(err, res){
-                if (err) throw err;
-                console.log("1 document inserted");
-                db.close();
-            })
-
-
-        });
+        const result = await dbo.collection(collectionName).find(queryField).toArray();
+    
+        db.close();
+    
+        return result;
     }
+    catch(err){
+        throw err;
+    }
+}
+
+async function addToMongoDB(collectionName, jsonData){
+
+    try{
+        const db = await MongoClient.connect(url);
+
+        console.log("Connected to database");
+
+        var dbo = db.db(process.env.COLLECTION_NAME);
+
+        await dbo.collection(collectionName).insert(jsonData);
+
+        console.log("1 document inserted");
+
+        db.close();
+    }
+    catch(err){
+        throw err;
+    }
+}
+
+async function updateMongoDB(collectionName, queryField, updateData){
+
+    try{
+        const db = await MongoClient.connect(url);
+    
+        console.log("Connected to database");
+
+        var dbo = db.db(process.env.COLLECTION_NAME);
+        
+        await dbo.collection(collectionName).update(queryField, {$set: updateData});
+
+        console.log("1 document updated");
+
+        db.close();
+    }
+    catch(err){
+        throw err;
+    }
+}
+
+async function deleteFromMongoDB(collectionName, queryField){
+
+    try{
+        const db = await MongoClient.connect(url);
+    
+        console.log("Connected to database");
+
+        var dbo = db.db(process.env.COLLECTION_NAME);
+        
+        await dbo.collection(collectionName).delete(queryField);
+
+        console.log("1 document deleted");
+
+        db.close();
+    }
+    catch(err){
+        throw err;
+    }
+}
+
+module.exports = {
+    queryFromMongoDB: queryFromMongoDB,
+    addToMongoDB: addToMongoDB,
+    updateMongoDB: updateMongoDB,
+    deleteFromMongoDB: deleteFromMongoDB
 };

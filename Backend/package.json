@@ -13,6 +13,7 @@
     "nodemon": "^1.18.10"
   },
   "dependencies": {
+    "async-polling": "^0.2.1",
     "cookie-parser": "^1.4.4",
     "cors": "^2.8.5",
     "dotenv": "^6.2.0",
