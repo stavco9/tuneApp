@@ -4,7 +4,6 @@ const session = require('express-session');
 const express = require('express');
 const request = require('request'); // "Request" library
 var cookieParser = require('cookie-parser');
-const artistsController = require('../controllers/artistsController');
 const tracksController = require('../controllers/tracksController');
 
 var app = express();
@@ -23,19 +22,21 @@ module.exports = function(app) {
   // artistsController Routes
   app.route('/tracks')
     .get(async function(req, res){
-      if (!req.session.spotify_access_token){
-        return res.redirect('/');
-      }
-
-      await artistsController.getAllArtists(req, res);
+      await tracksController.getAllTracks(req, res);
     })
-    .post(artistsController.AddNewArtist);
+    .post(tracksController.AddNewTrack);
 
+  // artistsController Routes
+  app.route('/tracks/features')
+  .get(async function(req, res){
+    await tracksController.getAllAudioFeatures(req, res);
+  });
+  //.post(tracksController.AddNewAudioFeature);
 
   app.route('/tracks/:trackId')
-    .get(artistsController.GetArtistById)
-    .put(artistsController.UpdateArtistById)
-    .delete(artistsController.DeleteArtistById);
+    .get(tracksController.GetTrackById)
+    .put(tracksController.UpdateTrackById)
+    .delete(tracksController.DeleteTrackById);
 
   app.route('/tracks/similar/:trackId')
       .get(tracksController.GetSimilarTracksById);

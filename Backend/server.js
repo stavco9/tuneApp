@@ -23,8 +23,12 @@ const spotifyStateKey = 'spotify_auth_state';
 const app = express();
 
 // Registering the artist routes
-var routes = require('./api/routes/artistsRoutes'); 
-routes(app);
+var artistRoutes = require('./api/routes/artistsRoutes'); 
+artistRoutes(app);
+
+// Registering the track routes
+var trackRoutes = require('./api/routes/tracksRoutes'); 
+trackRoutes(app);
 
 app.use(session({
     secret: 'keyboard cat',
