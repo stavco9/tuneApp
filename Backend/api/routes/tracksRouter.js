@@ -5,6 +5,7 @@ const express = require('express');
 const request = require('request'); // "Request" library
 var cookieParser = require('cookie-parser');
 const artistsController = require('../controllers/artistsController');
+const tracksController = require('../controllers/tracksController');
 
 var app = express();
 
@@ -35,4 +36,7 @@ module.exports = function(app) {
     .get(artistsController.GetArtistById)
     .put(artistsController.UpdateArtistById)
     .delete(artistsController.DeleteArtistById);
+
+  app.route('/tracks/similar/:trackId')
+      .get(tracksController.GetSimilarTracksById);
 };

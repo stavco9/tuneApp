@@ -4,6 +4,8 @@ var spotifyAuthentication = require('../../spotify-authentication');
 const mongoConnection = require('../../mongo-connection');
 var asyncPolling = require('async-polling');
 const request = require('request'); // "Request" library
+const usersController = require('usersController');
+
 const searchKeys = [ 'a', 'e', 'i', 'o', 'u', 'er', 'ar', 'or', 'de', 'do' ];
 
 const spotifyBaseUrl = "https://api.spotify.com/v1/";
@@ -122,6 +124,33 @@ function UpdateTrackById(req, res) {
 // Deletes a single artist by ID, exposed at DELETE /artists/artistID
 function DeleteTrackById(req, res) {
 	// Deletes the artist by ID, get ID by req.params.artistId
+}
+
+// MACHINE LEARNING !!!
+function GetSimilarTracksById(req, res) {
+	let trackId = req.params.trackId;
+	let userId = usersController.GetUserIdFromReq(req);
+
+	/*
+	let preferredTracks = usersController.GetPreferredTracksByUserId(userId);
+	let unfamilliarTracks = usersController.GetUnfamilliarTracksByUserId(userId);
+
+	let allTrackIds = [...new Set([...preferredTracks, ...unfamilliarTracks].map(t => t.trackId))];
+	*/
+
+    let allTracksFeatures = allTrackIds.map((t) => {
+
+    });
+
+	let allTrackFeatures =
+
+    PythonShell.run('script.py', { mode: 'json ', args: [[...preferredTracks, ...unfamilliarTracks], trackFeatures]}, function (err, results) {
+        JSON.parse(results).map((i) => {
+            return allTrackIds[i];
+		});
+    });
+
+
 }
 
 //module.exports = {
