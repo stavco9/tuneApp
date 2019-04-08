@@ -5,7 +5,8 @@ const mongoConnection = require('../../mongo-connection');
 var asyncPolling = require('async-polling');
 const request = require('request'); // "Request" library
 const reqPromise = require('request-promise');
-const usersController = require('usersController');
+var {PythonShell} = require('python-shell');
+//const usersController = require('usersController');
 const searchKeys = [ 'a', 'e', 'i', 'o', 'u', 'er', 'ar', 'or', 'de', 'do' ];
 
 const spotifyBaseUrl = "https://api.spotify.com/v1/";
@@ -166,10 +167,33 @@ function DeleteTrackById(req, res) {
 	// Deletes the artist by ID, get ID by req.params.artistId
 }
 
+
+function ConvertAudioFeaturesJsonToArray(json) {
+    let features = [];
+    features.push(json.danceability);
+    features.push(json.energy);
+    features.push(json.key);
+    features.push(json.loudness);
+    features.push(json.mode);
+    features.push(json.speechiness);
+    features.push(json.acousticness);
+    features.push(json.instrumentalness);
+    features.push(json.liveness);
+    features.push(json.valence);
+    features.push(json.tempo);
+    features.push(json.time_signature);
+    return features;
+}
+
 // MACHINE LEARNING !!!
-function GetSimilarTracksById(req, res) {
+async function GetSimilarTracksById(req, res) {
 	let trackId = req.params.trackId;
-	let userId = usersController.GetUserIdFromReq(req);
+	//let userId = usersController.GetUserIdFromReq(req);
+
+    let trackFeatures = ConvertAudioFeaturesJsonToArray((await mongoConnection.queryFromMongoDB('AudioFeatures', {'id': trackId}))[0]);
+    let allTracksFeatures = (await mongoConnection.queryFromMongoDB('AudioFeatures', {})).map((j) => {
+        return ConvertAudioFeaturesJsonToArray(j);
+    });
 
 	/*
 	let preferredTracks = usersController.GetPreferredTracksByUserId(userId);
@@ -178,17 +202,25 @@ function GetSimilarTracksById(req, res) {
 	let allTrackIds = [...new Set([...preferredTracks, ...unfamilliarTracks].map(t => t.trackId))];
 	*/
 
-    let allTracksFeatures = allTrackIds.map((t) => {
+    /*let allTracksFeatures = allTrackIds.map((t) => {
+        mongoConnection.queryFromMongoDB('AudioFeatures', {'id': t.trackId})
+    });*/
 
+    PythonShell.run('D:\\tuneapp\\python\\NearestNeighbors.py', {pythonOptions: ['-u'], args: [allTracksFeatures, trackFeatures]}, function (err, results) {
+    	console.log("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+        console.log(results);
+        /*var y = JSON.parse(results).map((i) => {
+            return allTracksFeatures[i];
+        });*/
+        return results;
     });
-
-	let allTrackFeatures =
-
-    PythonShell.run('script.py', { mode: 'json ', args: [[...preferredTracks, ...unfamilliarTracks], trackFeatures]}, function (err, results) {
-        JSON.parse(results).map((i) => {
-            return allTrackIds[i];
+    /*PythonShell.run('D:\\tuneapp\\python\\NearestNeighbors.py', { mode: 'json', args: [allTracksFeatures, trackFeatures]}, function (err, results) {
+        console.log(results);
+        var y = JSON.parse(results).map((i) => {
+            return allTracksFeatures[i];
 		});
-    });
+        return y;
+    });*/
 
 
 }
@@ -200,5 +232,6 @@ module.exports = {
 	UpdateTrackById: UpdateTrackById,
 	DeleteTrackById: DeleteTrackById,
 	getAllAudioFeatures: getAllAudioFeatures,
-	AddNewAudioFeature: AddNewAudioFeature
+	AddNewAudioFeature: AddNewAudioFeature,
+    GetSimilarTracksById: GetSimilarTracksById,
 };
