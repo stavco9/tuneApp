@@ -4,7 +4,9 @@ var spotifyAuthentication = require('../../spotify-authentication');
 const mongoConnection = require('../../mongo-connection');
 var asyncPolling = require('async-polling');
 const request = require('request'); // "Request" library
-const searchKeys = [ 'a', 'e', 'i', 'o', 'u', 'er', 'ar', 'or', 'de', 'do' ];
+const reqPromise = require('request-promise');
+//const spotify_access_token = process.env.SPOTIFT_ACCESS_TOKEN;
+const searchKeys = [ 'a', 'e', 'i', 'o', 'u', 'er', 'ar', 'or', 'de', 'do' ]; // Use all letters
 
 const spotifyBaseUrl = "https://api.spotify.com/v1/";
 
@@ -12,13 +14,17 @@ var polling = asyncPolling(function(req, res){
 
 	var result = {};
 
+	// get Spotify access token for authentication
 	var spotify_access_token_promise = spotifyAuthentication.getAccessTokenForPolling();
 
+	// random key search letter from a constant array
 	keyLetter = searchKeys[Math.floor(Math.random()*searchKeys.length)];
 	
+	// When the access token is given 
 	spotify_access_token_promise.then(function(spotify_access_token){
 
-		var getParameters = {
+		// parameters of HTTP get request to query random tracks from Spotify
+		var getSearchTrackParameters = {
 			url: (spotifyBaseUrl + "search?q=*" + keyLetter + "*&type=track&limit=50"),
 			headers: {
 				'Authorization': 'Bearer ' + spotify_access_token
@@ -26,11 +32,15 @@ var polling = asyncPolling(function(req, res){
 			json: true
 		};
 
-		request.get(getParameters, async function(error, response, body) {
+		// Invoke the web request
+		request.get(getSearchTrackParameters, async function(error, response, body) {
+
+			// if the result is OK
 			if (!error && response.statusCode === 200) {
-	
-				//res.statusCode = 200;
-	
+
+				//console.log(body)
+
+				// foreach track in the tracks array
 				body.tracks.items.forEach(async item => {
 	
 					var trackResult = await mongoConnection.queryFromMongoDB('Tracks', {'id': item.id});
@@ -44,6 +54,29 @@ var polling = asyncPolling(function(req, res){
 	
 				tracks.forEach(async track => {
 	
+					var getAudioParameters = {
+						url: (spotifyBaseUrl + "audio-features/" + track.id),
+						headers: {
+							'Authorization': 'Bearer ' + spotify_access_token
+						},
+						json: true
+					};
+
+					reqPromise(getAudioParameters)
+					.then(async function(featuresBody){			
+							//res.statusCode = 200;
+							console.log(featuresBody)
+
+							var featuresResult = await mongoConnection.queryFromMongoDB('AudioFeatures', {'id': featuresBody.id});
+			
+							if (featuresResult.length < 1){
+								await mongoConnection.addToMongoDB("AudioFeatures", featuresBody);
+							}
+					})
+					.catch(function(err){
+						console.log(err);
+					});
+
 					var albumResult = await mongoConnection.queryFromMongoDB('Albums', {'id': track.album.id});
 			
 					if (albumResult.length < 1){
@@ -62,11 +95,11 @@ var polling = asyncPolling(function(req, res){
 				end(null, result);
 				
 				res.json({"Added all items": "true"});
-	
-			} else {
+			}
+			else {
 				end(error);
 				console.log("invalid_token");
-	
+
 				return;
 			}
 		});
@@ -95,13 +128,22 @@ polling.on('result', function (tracks) {
 	});
 });
 
-module.exports = {
-	tracksPolling: polling.run(),
-	//tracksResult: polling.on('result')
-};
-
 // Get all tracks from DB
-async function getAllTracks(req, res) {
+async function getAllTracks(req, res) {	
+	var Alltracks = await mongoConnection.queryFromMongoDB('Tracks', {});
+
+	res.json(Alltracks);
+}
+
+async function getAllAudioFeatures(req, res){
+	var AllAudioFeatures = await mongoConnection.queryFromMongoDB('AudioFeatures', {});
+
+	res.json(AllAudioFeatures);
+}
+
+// Saves a new artist, exposed at POST /artists
+function AddNewAudioFeature(req, res) {
+	// Add a new artist by req.body
 }
 
 // Saves a new artist, exposed at POST /artists
@@ -124,10 +166,13 @@ function DeleteTrackById(req, res) {
 	// Deletes the artist by ID, get ID by req.params.artistId
 }
 
-//module.exports = {
-	//getAllArtists: getAllArtists,
-	//AddNewArtist: AddNewArtist,
-	//GetArtistById: GetArtistById,
-	//UpdateArtistById: UpdateArtistById,
-	//DeleteArtistById: DeleteArtistById
-//};
+module.exports = {
+	tracksPolling: polling.run(),
+	getAllTracks: getAllTracks,
+	AddNewTrack: AddNewTrack,
+	GetTrackById: GetTrackById,
+	UpdateTrackById: UpdateTrackById,
+	DeleteTrackById: DeleteTrackById,
+	getAllAudioFeatures: getAllAudioFeatures,
+	AddNewAudioFeature: AddNewAudioFeature
+};
