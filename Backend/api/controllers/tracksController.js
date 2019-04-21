@@ -19,10 +19,11 @@ var polling = asyncPolling(function(req, res){
 	var spotify_access_token_promise = spotifyAuthentication.getAccessTokenForPolling();
 
 	// random key search letter from a constant array
-	keyLetter = searchKeys[Math.floor(Math.random()*searchKeys.length)];
+	//keyLetter = searchKeys[Math.floor(Math.random()*searchKeys.length)];
+	keyLetter = 'a';
 	
 	// When the access token is given
-	spotify_access_token_promise.then(function(spotify_access_token){
+	spotify_access_token_promise.then(async function(spotify_access_token){
 
 		// parameters of HTTP get request to query random tracks from Spotify
 		var getSearchTrackParameters = {
@@ -32,83 +33,95 @@ var polling = asyncPolling(function(req, res){
 			},
 			json: true
 		};
+		var test = 42;
 
-		// Invoke the web request
-		request.get(getSearchTrackParameters, async function(error, response, body) {
+		while (test !== undefined || test !== null) {
 
-			// if the result is OK
-			if (!error && response.statusCode === 200) {
+			await sleep(10000);
+			// Invoke the web request
+			request.get(getSearchTrackParameters, async function (error, response, body) {
 
-				//console.log(body)
+				// if the result is OK
+				if (!error && response.statusCode === 200) {
 
-				// foreach track in the tracks array
-				body.tracks.items.forEach(async item => {
-	
-					var trackResult = await mongoConnection.queryFromMongoDB('Tracks', {'id': item.id});
-	
-					if (trackResult.length < 1){
-						await mongoConnection.addToMongoDB("Tracks", item);
-					}
-				});
+					//console.log(body)
+					getSearchTrackParameters.url = body.tracks.next;
+					test = body.tracks.next;
 
-				var tracks = body.tracks.items;
-	
-				tracks.forEach(async track => {
-	
-					var getAudioParameters = {
-						url: (spotifyBaseUrl + "audio-features/" + track.id),
-						headers: {
-							'Authorization': 'Bearer ' + spotify_access_token
-						},
-						json: true
-					};
+					// foreach track in the tracks array
+					body.tracks.items.forEach(async item => {
 
-					reqPromise(getAudioParameters)
-					.then(async function(featuresBody){
-							//res.statusCode = 200;
-							console.log(featuresBody)
+						var trackResult = await mongoConnection.queryFromMongoDB('Tracks', {'id': item.id});
 
-							var featuresResult = await mongoConnection.queryFromMongoDB('AudioFeatures', {'id': featuresBody.id});
-
-							if (featuresResult.length < 1){
-								await mongoConnection.addToMongoDB("AudioFeatures", featuresBody);
-							}
-					})
-					.catch(function(err){
-						console.log(err);
+						if (trackResult.length < 1) {
+							await mongoConnection.addToMongoDB("Tracks", item);
+						}
 					});
 
-					var albumResult = await mongoConnection.queryFromMongoDB('Albums', {'id': track.album.id});
-			
-					if (albumResult.length < 1){
-						await mongoConnection.addToMongoDB("Albums", track.album);
-					}
-			
-					track.artists.forEach(async artist =>{
-						var artistResult = await mongoConnection.queryFromMongoDB('Artists', {'id': artist.id});
-			
-						if (artistResult.length < 1){
-							await mongoConnection.addToMongoDB("Artists", artist);
+					var tracks = body.tracks.items;
+
+					tracks.forEach(async track => {
+
+						var getAudioParameters = {
+							url: (spotifyBaseUrl + "audio-features/" + track.id),
+							headers: {
+								'Authorization': 'Bearer ' + spotify_access_token
+							},
+							json: true
+						};
+
+						reqPromise(getAudioParameters)
+							.then(async function (featuresBody) {
+								//res.statusCode = 200;
+								console.log(featuresBody)
+
+								var featuresResult = await mongoConnection.queryFromMongoDB('AudioFeatures', {'id': featuresBody.id});
+
+								if (featuresResult.length < 1) {
+									await mongoConnection.addToMongoDB("AudioFeatures", featuresBody);
+								}
+							})
+							.catch(function (err) {
+								console.log(err);
+							});
+
+						var albumResult = await mongoConnection.queryFromMongoDB('Albums', {'id': track.album.id});
+
+						if (albumResult.length < 1) {
+							await mongoConnection.addToMongoDB("Albums", track.album);
 						}
-					})
-				});
 
-				end(null, result);
-				
-				res.json({"Added all items": "true"});
-			}
-			else {
-				end(error);
-				console.log("invalid_token");
+						track.artists.forEach(async artist => {
+							var artistResult = await mongoConnection.queryFromMongoDB('Artists', {'id': artist.id});
 
-				return;
-			}
-		});
+							if (artistResult.length < 1) {
+								await mongoConnection.addToMongoDB("Artists", artist);
+							}
+						})
+					});
+
+					end(null, result);
+
+					res.json({"Added all items": "true"});
+				} else {
+					end(error);
+					console.log("invalid_token");
+
+					return;
+				}
+			});
+		}
 	}, function(err){
 		console.log(err);
 	})
 
 }, 25000);
+
+function sleep(ms) {
+	return new Promise(resolve => {
+		setTimeout(resolve, ms)
+	})
+}
 
 polling.on('result', function (tracks) {
     tracks.forEach(async track => {
@@ -154,7 +167,20 @@ function AddNewTrack(req, res) {
 
 // Gets a single artist by ID, exposed at GET /artists/artistID
 function GetTrackById(req, res) {
-// Return the artist in JSON format, get ID by req.params.artistId
+	if (req.params.trackId === 'top') {
+		GetTopTracks(req, res);
+	}
+	else {
+		var trackResult = mongoConnection.queryFromMongoDB('Tracks', {'id': req.params.trackId});
+		trackResult.then(function (result) {
+			if (result.length < 1) {
+				res.status(404).send('The track with the ID ' + req.params.trackId + " was not found!");
+			} else {
+				res.json(result);
+			}
+		});
+	}
+
 }
 
 // Updates a single artist by ID, exposed at PUT /artists/artistID
@@ -165,6 +191,83 @@ function UpdateTrackById(req, res) {
 // Deletes a single artist by ID, exposed at DELETE /artists/artistID
 function DeleteTrackById(req, res) {
 	// Deletes the artist by ID, get ID by req.params.artistId
+}
+
+var arrayUnique = function (arr) {
+	return arr.filter(function(item, index){
+		return arr.indexOf(item) >= index;
+	});
+};
+
+// Saves a new artist, exposed at POST /artists
+function LikeTrackById(req, res) {
+	var trackResult = mongoConnection.queryFromMongoDB('Tracks', {'id': req.params.trackId});
+	trackResult.then(async function (result) {
+		if (result.length < 1) {
+			res.status(404).send('The track with the ID ' + req.params.trackId + " was not found!");
+		}
+		else {
+			// REPLACE THE EMAIL WITH req.session.token.email IT SHOULD WORK IF YOU'RE USING A REAL WEB APP!
+			var user = await mongoConnection.queryFromMongoDB('users', {'email': 'talfin84@gmail.com'});
+
+			if (user.length < 1) {
+				res.status(401).send('You are unauthorized! Please login!');
+			}
+			var likedTracks = user[0].likedTracks;
+
+			if (likedTracks === undefined) {
+				likedTracks = [];
+			}
+			var length = likedTracks.length;
+			likedTracks.push(req.params.trackId);
+			likedTracks = arrayUnique(likedTracks);
+
+			if (length !== likedTracks.length) {
+				if (result[0].likes === undefined) { result[0].likes = 0; }
+				result[0].likes++;
+				await mongoConnection.updateMongoDB('Tracks', {'id': req.params.trackId}, {likes: result[0].likes});
+			}
+
+			// REPLACE THE EMAIL WITH req.session.token.email IT SHOULD WORK IF YOU'RE USING A REAL WEB APP!
+			await mongoConnection.updateMongoDB('users', {'email': 'talfin84@gmail.com'}, {likedTracks: likedTracks});
+			res.status(200).send();
+		}
+	});
+}
+
+// Saves a new artist, exposed at POST /artists
+function UnlikeTrackById(req, res) {
+	var trackResult = mongoConnection.queryFromMongoDB('Tracks', {'id': req.params.trackId});
+	trackResult.then(async function (result) {
+		if (result.length < 1) {
+			res.status(404).send('The track with the ID ' + req.params.trackId + " was not found!");
+		}
+		else {
+			// REPLACE THE EMAIL WITH req.session.token.email IT SHOULD WORK IF YOU'RE USING A REAL WEB APP!
+			var user = await mongoConnection.queryFromMongoDB('users', {'email': 'talfin84@gmail.com'});
+
+			if (user.length < 1) {
+				res.status(401).send('You are unauthorized! Please login!');
+			}
+			var likedTracks = user[0].likedTracks;
+
+			if (likedTracks === undefined) {
+				likedTracks = [];
+			}
+
+			// Remove the unliked track
+			var index = likedTracks.indexOf(req.params.trackId);
+			if (index > -1) {
+				likedTracks.splice(index, 1);
+				if (result[0].likes === undefined) { result[0].likes = 1; }
+				result[0].likes--;
+				await mongoConnection.updateMongoDB('Tracks', {'id': req.params.trackId}, {likes: result[0].likes});
+			}
+			// REPLACE THE EMAIL WITH req.session.token.email IT SHOULD WORK IF YOU'RE USING A REAL WEB APP!
+			await mongoConnection.updateMongoDB('users', {'email': 'talfin84@gmail.com'}, {likedTracks: likedTracks});
+			res.status(200).send();
+		}
+	});
 }
 
 
@@ -221,9 +324,20 @@ async function GetSimilarTracksById(req, res) {
 		});
         return y;
     });*/
-
-
 }
+
+// tracks/top/trackId
+async function GetTopTracks(req, res) {
+	let limit = 10;
+	if (req.params.limit !== undefined) {
+		limit = parseInt(req.params.limit);
+	}
+	var trackResult = mongoConnection.queryFromMongoDBSortedMax('Tracks', {likes: -1}, limit);
+	trackResult.then(function (result) {
+		res.json(result);
+	});
+}
+
 module.exports = {
 	tracksPolling: polling.run(),
 	getAllTracks: getAllTracks,
@@ -233,5 +347,8 @@ module.exports = {
 	DeleteTrackById: DeleteTrackById,
 	getAllAudioFeatures: getAllAudioFeatures,
 	AddNewAudioFeature: AddNewAudioFeature,
+	LikeTrackById: LikeTrackById,
+	UnlikeTrackById: UnlikeTrackById,
     GetSimilarTracksById: GetSimilarTracksById,
+	GetTopTracks: GetTopTracks
 };

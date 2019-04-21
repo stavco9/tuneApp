@@ -75,24 +75,22 @@ app.get('/home', async(req, res) => {
         try{
 
             if (!req.session.userDetailsFromDB){
-                req.session.userDetailsFromDB = mongoConnection.queryFromMongoDB('users', {'email': req.session.token.email});
+                req.session.userDetailsFromDB = await mongoConnection.queryFromMongoDB('users', {'email': req.session.token.email});
+                //req.session.userDetailsFromDB = mongoConnection.queryFromMongoDB('users', {});
             }
-        
-            if (req.session.userDetailsFromDB.length < 1){
-                await mongoConnection.addToMongoDB('users', req.session.token);
-            }
-            else{                
-                if(req.session.token.hasOwnProperty('google_id')){
-                    if (!req.session.userDetailsFromDB[0].hasOwnProperty('google_id')){
-                        await mongoConnection.updateMongoDB('users', {'email': req.session.token.email}, req.session.token);
+                if (req.session.userDetailsFromDB.length < 1) {
+                    await mongoConnection.addToMongoDB('users', req.session.token);
+                } else {
+                    if (req.session.token.hasOwnProperty('google_id')) {
+                        if (!req.session.userDetailsFromDB[0].hasOwnProperty('google_id')) {
+                            await mongoConnection.updateMongoDB('users', {'email': req.session.token.email}, req.session.token);
+                        }
+                    } else if (req.session.token.hasOwnProperty('spotify_id')) {
+                        if (!req.session.userDetailsFromDB[0].hasOwnProperty('spotify_id')) {
+                            await mongoConnection.updateMongoDB('users', {'email': req.session.token.email}, req.session.token);
+                        }
                     }
                 }
-                else if(req.session.token.hasOwnProperty('spotify_id')){
-                    if (!req.session.userDetailsFromDB[0].hasOwnProperty('spotify_id')){
-                        await mongoConnection.updateMongoDB('users', {'email': req.session.token.email}, req.session.token);
-                    }
-                }
-            }
         }
         catch(error){
             console.log(error);
@@ -101,7 +99,6 @@ app.get('/home', async(req, res) => {
         //artistsController.getAllArtists(req, res);
 
         //tracksController.tracksPolling();
-
         res.send(req.session.token);
     }
 });

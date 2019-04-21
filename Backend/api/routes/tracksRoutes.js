@@ -38,6 +38,15 @@ module.exports = function(app) {
     .put(tracksController.UpdateTrackById)
     .delete(tracksController.DeleteTrackById);
 
+  app.route('/tracks/like/:trackId')
+      .post(tracksController.LikeTrackById);
+
+  app.route('/tracks/unlike/:trackId')
+      .post(tracksController.UnlikeTrackById);
+
   app.route('/tracks/similar/:trackId')
       .get(tracksController.GetSimilarTracksById);
+
+  app.route('/tracks/top/:limit')
+      .get(tracksController.GetTopTracks);
 };

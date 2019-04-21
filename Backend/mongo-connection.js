@@ -27,6 +27,26 @@ async function queryFromMongoDB(collectionName, queryField, callback){
     }
 }
 
+async function queryFromMongoDBSortedMax(collectionName, sortField, limit, callback){
+
+    try{
+        const db = await MongoClient.connect(url);
+
+        console.log("Connected to database");
+
+        var dbo = db.db(process.env.COLLECTION_NAME);
+
+        const result = await dbo.collection(collectionName).find().sort(sortField).limit(limit).toArray();
+
+        db.close();
+
+        return result;
+    }
+    catch(err){
+        throw err;
+    }
+}
+
 async function addToMongoDB(collectionName, jsonData){
 
     try{
@@ -91,5 +111,6 @@ module.exports = {
     queryFromMongoDB: queryFromMongoDB,
     addToMongoDB: addToMongoDB,
     updateMongoDB: updateMongoDB,
-    deleteFromMongoDB: deleteFromMongoDB
+    deleteFromMongoDB: deleteFromMongoDB,
+    queryFromMongoDBSortedMax: queryFromMongoDBSortedMax
 };
