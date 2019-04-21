@@ -13,7 +13,7 @@ const googleAuthentication = require('./google-authentication');
 const spotifyAuthentication = require('./spotify-authentication');
 const mongoConnection = require('./mongo-connection');
 //const artistsController = require('./api/controllers/artistsController');
-const tracksController = require('./api/controllers/tracksController');
+//const tracksController = require('./api/controllers/tracksController');
 
 const hostname = '127.0.0.1';
 const port = 8080;
