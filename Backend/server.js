@@ -30,30 +30,25 @@ artistRoutes(app);
 var trackRoutes = require('./api/routes/tracksRoutes'); 
 trackRoutes(app);
 
+// Registering the album routes
+var albumRoutes = require('./api/routes/albumsRoutes'); 
+albumRoutes(app);
+
 app.use(session({
     secret: 'keyboard cat',
     resave: false,
     saveUninitialized: true,
-    cookie:{ maxAge: 7200000}
+    cookie:{ maxAge: 2*60*60*1000} // two hours
     }))
 
 app.use(cookieParser());
 
 app.get('/', (req, res) => {
-    res.statusCode = 200;
-
-    var googleUrl = googleAuthentication.urlGoogle();
-
-    var spotifyUrl = spotifyAuthentication.getSpofityUrl();
-
-    res.cookie(spotifyStateKey, queryString.parseUrl(spotifyUrl).query.state);
-
     if (req.session.token){
         return res.redirect('/home');
     }
     else{
-        res.setHeader('Content-Type', 'text/html');
-        res.end('<a href=\'' + googleUrl + '\'>Login with Google</a></br><a href=\'' + spotifyUrl + '\'>Login with Spotify</a>\n');
+        return res.redirect('/login');
     }
 });
 
@@ -63,7 +58,7 @@ app.get('/home', async(req, res) => {
     var url = googleAuthentication.urlGoogle();
 
     if (!req.session.token){
-        return res.redirect('/');
+        return res.redirect('/login');
     }
     else{
         if (!req.session.spotify_access_token){
@@ -101,6 +96,36 @@ app.get('/home', async(req, res) => {
         //tracksController.tracksPolling();
         res.send(req.session.token);
     }
+});
+
+app.get('/login', (req, res) => {
+
+    res.statusCode = 200;
+
+    var googleUrl = googleAuthentication.urlGoogle();
+
+    var spotifyUrl = spotifyAuthentication.getSpofityUrl();
+
+    res.cookie(spotifyStateKey, queryString.parseUrl(spotifyUrl).query.state);
+
+    if (req.session.token){
+        return res.redirect('/home');
+    }
+    else{
+        res.setHeader('Content-Type', 'text/html');
+        res.end('<a href=\'' + googleUrl + '\'>Login with Google</a></br><a href=\'' + spotifyUrl + '\'>Login with Spotify</a>\n');
+    }
+
+    //res.redirect('/');
+});
+
+app.get('/logout', (req, res) => {
+
+    if (req.session.token){
+        req.session.token = null;
+    }
+
+    res.redirect('/');
 });
 
 app.get('/google-auth', async(req, res, next) => {

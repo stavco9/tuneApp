@@ -14,7 +14,7 @@ module.exports = function(app) {
       secret: 'keyboard cat',
       resave: false,
       saveUninitialized: true,
-      cookie: { maxAge: 120000 }
+      cookie:{ maxAge: 2*60*60*1000} // two hours
       }))
 
   app.use(cookieParser());

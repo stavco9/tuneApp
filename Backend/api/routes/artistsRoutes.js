@@ -14,7 +14,7 @@ module.exports = function(app) {
       secret: 'keyboard cat',
       resave: false,
       saveUninitialized: true,
-      cookie: { maxAge: 120000 }
+      cookie:{ maxAge: 2*60*60*1000} // two hours
       }))
 
   app.use(cookieParser());
@@ -22,10 +22,6 @@ module.exports = function(app) {
   // artistsController Routes
   app.route('/artists')
     .get(async function(req, res){
-      if (!req.session.spotify_access_token){
-        return res.redirect('/');
-      }
-
       await artistsController.getAllArtists(req, res);
     })
     .post(artistsController.AddNewArtist);
@@ -35,4 +31,16 @@ module.exports = function(app) {
     .get(artistsController.GetArtistById)
     .put(artistsController.UpdateArtistById)
     .delete(artistsController.DeleteArtistById);
+
+  //app.route('/artists/like/:artistId')
+      //.post(artistsController.LikeArtistById);
+
+  //app.route('/artists/unlike/:artistId')
+      //.post(artistsController.UnlikeArtistById);
+
+  //app.route('/artists/similar/:artistId')
+      //.get(artistsController.GetSimilarArtistsById);
+
+  //app.route('/artists/top/:limit')
+      //.get(artistsController.GetTopArtists);
 };
