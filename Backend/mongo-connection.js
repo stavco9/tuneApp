@@ -96,7 +96,7 @@ async function deleteFromMongoDB(collectionName, queryField){
 
         var dbo = db.db(process.env.COLLECTION_NAME);
         
-        await dbo.collection(collectionName).delete(queryField);
+        await dbo.collection(collectionName).remove(queryField);
 
         console.log("1 document deleted");
 

@@ -60,5 +60,5 @@ module.exports = {
 	AddNewAlbum: AddNewAlbum,
 	GetAlbumById: GetAlbumById,
 	UpdateAlbumById: UpdateAlbumById,
-	DeleteAlbumById: DeleteAlbumById,
+	DeleteAlbumById: DeleteAlbumById
 };

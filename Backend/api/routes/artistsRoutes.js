@@ -32,15 +32,15 @@ module.exports = function(app) {
     .put(artistsController.UpdateArtistById)
     .delete(artistsController.DeleteArtistById);
 
-  //app.route('/artists/like/:artistId')
-      //.post(artistsController.LikeArtistById);
+  app.route('/artists/like/:artistId')
+      .post(artistsController.LikeArtistById);
 
-  //app.route('/artists/unlike/:artistId')
-      //.post(artistsController.UnlikeArtistById);
+  app.route('/artists/unlike/:artistId')
+      .post(artistsController.UnlikeArtistById);
 
   //app.route('/artists/similar/:artistId')
       //.get(artistsController.GetSimilarArtistsById);
 
-  //app.route('/artists/top/:limit')
-      //.get(artistsController.GetTopArtists);
+  app.route('/artists/top/:limit')
+      .get(artistsController.GetTopArtists);
 };

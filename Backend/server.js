@@ -34,6 +34,10 @@ trackRoutes(app);
 var albumRoutes = require('./api/routes/albumsRoutes'); 
 albumRoutes(app);
 
+// Registering the user routes
+var userRoutes = require('./api/routes/usersRoutes'); 
+userRoutes(app);
+
 app.use(session({
     secret: 'keyboard cat',
     resave: false,
@@ -123,9 +127,27 @@ app.get('/logout', (req, res) => {
 
     if (req.session.token){
         req.session.token = null;
+        req.session.userDetailsFromDB = null;
     }
 
     res.redirect('/');
+});
+
+app.get('/remove-account', async (req, res) => {
+
+    if (!req.session.token){
+        return res.redirect('/login');
+    }
+    else{
+        var email = req.session.token.email;
+
+        req.session.token = null;
+        req.session.userDetailsFromDB = null;
+
+        await mongoConnection.deleteFromMongoDB('users', {'email': email});
+    }
+
+    res.status(204).send("User " + email + " removed sucessfully");
 });
 
 app.get('/google-auth', async(req, res, next) => {
