@@ -38,6 +38,10 @@ albumRoutes(app);
 var userRoutes = require('./api/routes/usersRoutes'); 
 userRoutes(app);
 
+// Registering the user routes
+var playlistRoutes = require('./api/routes/playlistRoute'); 
+playlistRoutes(app);
+
 app.use(session({
     secret: 'keyboard cat',
     resave: false,

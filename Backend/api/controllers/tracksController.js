@@ -201,10 +201,10 @@ var arrayUnique = function (arr) {
 
 // Saves a new artist, exposed at POST /artists
 function LikeTrackById(req, res) {
-	var trackResult = mongoConnection.queryFromMongoDB('Tracks', {'id': req.params.trackId});
+	var trackResult = mongoConnection.queryFromMongoDB('Tracks', {'id': req.body.trackId});
 	trackResult.then(async function (result) {
 		if (result.length < 1) {
-			res.status(404).send('The track with the ID ' + req.params.trackId + " was not found!");
+			res.status(404).send('The track with the ID ' + req.body.trackId + " was not found!");
 		}
 		else {
 			if (req.session.token == null){
@@ -226,20 +226,20 @@ function LikeTrackById(req, res) {
 					likedTracks = [];
 				}
 				var length = likedTracks.length;
-				likedTracks.push(req.params.trackId);
+				likedTracks.push(req.body.trackId);
 				likedTracks = arrayUnique(likedTracks);
 
 				if (length !== likedTracks.length) {
 					if (result[0].likes === undefined) { result[0].likes = 0; }
 					result[0].likes++;
-					await mongoConnection.updateMongoDB('Tracks', {'id': req.params.trackId}, {likes: result[0].likes});
+					await mongoConnection.updateMongoDB('Tracks', {'id': req.body.trackId}, {likes: result[0].likes});
 				}
 
 				// REPLACE THE EMAIL WITH req.session.token.email IT SHOULD WORK IF YOU'RE USING A REAL WEB APP!
 				//await mongoConnection.updateMongoDB('users', {'email': email}, {likedTracks: likedTracks});
 				await mongoConnection.updateMongoDB('users', {'email': "talfin84@gmail.com"}, {likedTracks: likedTracks});
 
-				res.status(200).send('Liked track ' + req.params.trackId);
+				res.status(200).send('Liked track ' + req.body.trackId);
 			}
 		}
 	});
@@ -247,10 +247,10 @@ function LikeTrackById(req, res) {
 
 // Saves a new artist, exposed at POST /artists
 function UnlikeTrackById(req, res) {
-	var trackResult = mongoConnection.queryFromMongoDB('Tracks', {'id': req.params.trackId});
+	var trackResult = mongoConnection.queryFromMongoDB('Tracks', {'id': req.body.trackId});
 	trackResult.then(async function (result) {
 		if (result.length < 1) {
-			res.status(404).send('The track with the ID ' + req.params.trackId + " was not found!");
+			res.status(404).send('The track with the ID ' + req.body.trackId + " was not found!");
 		}
 		else {
 			if (req.session.token == null){
@@ -273,18 +273,18 @@ function UnlikeTrackById(req, res) {
 				}
 
 				// Remove the unliked track
-				var index = likedTracks.indexOf(req.params.trackId);
+				var index = likedTracks.indexOf(req.body.trackId);
 				if (index > -1) {
 					likedTracks.splice(index, 1);
 					if (result[0].likes === undefined) { result[0].likes = 1; }
 					result[0].likes--;
-					await mongoConnection.updateMongoDB('Tracks', {'id': req.params.trackId}, {likes: result[0].likes});
+					await mongoConnection.updateMongoDB('Tracks', {'id': req.body.trackId}, {likes: result[0].likes});
 				}
 				// REPLACE THE EMAIL WITH req.session.token.email IT SHOULD WORK IF YOU'RE USING A REAL WEB APP!
 				await mongoConnection.updateMongoDB('users', {'email': 'talfin84@gmail.com'}, {likedTracks: likedTracks});
 				//await mongoConnection.updateMongoDB('users', {'email': email}, {likedTracks: likedTracks});
 
-				res.status(200).send('Unliked track ' + req.params.trackId);
+				res.status(200).send('Unliked track ' + req.body.trackId);
 			}
 		}
 	});

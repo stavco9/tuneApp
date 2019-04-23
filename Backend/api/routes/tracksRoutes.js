@@ -19,6 +19,12 @@ module.exports = function(app) {
 
   app.use(cookieParser());
 
+  // Parse URL-encoded bodies (as sent by HTML forms)
+  app.use(express.urlencoded());
+
+  // Parse JSON bodies (as sent by API clients)
+  app.use(express.json());
+
   // artistsController Routes
   app.route('/tracks')
     .get(async function(req, res){
@@ -38,10 +44,18 @@ module.exports = function(app) {
     .put(tracksController.UpdateTrackById)
     .delete(tracksController.DeleteTrackById);
 
-  app.route('/tracks/like/:trackId')
+  // Body format for POST request
+  //{
+  //  "trackId": "dsgkkld"
+  //}
+  app.route('/tracks/like/')
       .post(tracksController.LikeTrackById);
 
-  app.route('/tracks/unlike/:trackId')
+  // Body format for POST request
+  //{
+  //  "trackId": "dsgkkld"
+  //}
+  app.route('/tracks/unlike/')
       .post(tracksController.UnlikeTrackById);
 
   app.route('/tracks/similar/:trackId')

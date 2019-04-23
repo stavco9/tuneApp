@@ -51,10 +51,10 @@ var arrayUnique = function (arr) {
 
 // Saves a new artist, exposed at POST /artists
 function LikeArtistById(req, res) {
-	var artistResult = mongoConnection.queryFromMongoDB('Artists', {'id': req.params.artistId});
+	var artistResult = mongoConnection.queryFromMongoDB('Artists', {'id': req.body.artistId});
 	artistResult.then(async function (result) {
 		if (result.length < 1) {
-			res.status(404).send('The artist with the ID ' + req.params.artistId + " was not found!");
+			res.status(404).send('The artist with the ID ' + req.body.artistId + " was not found!");
 		}
 		else {
 			if (req.session.token == null){
@@ -77,20 +77,20 @@ function LikeArtistById(req, res) {
 				}
 
 				var length = likedArtists.length;
-				likedArtists.push(req.params.artistId);
+				likedArtists.push(req.body.artistId);
 				likedArtists = arrayUnique(likedArtists);
 
 				if (length !== likedArtists.length) {
 					if (result[0].likes === undefined) { result[0].likes = 0; }
 					result[0].likes++;
-					await mongoConnection.updateMongoDB('Artists', {'id': req.params.artistId}, {likes: result[0].likes});
+					await mongoConnection.updateMongoDB('Artists', {'id': req.body.artistId}, {likes: result[0].likes});
 				}
 
 				// REPLACE THE EMAIL WITH req.session.token.email IT SHOULD WORK IF YOU'RE USING A REAL WEB APP!
 				//await mongoConnection.updateMongoDB('users', {'email': email}, {likedartists: likedartists});
 				await mongoConnection.updateMongoDB('users', {'email': "talfin84@gmail.com"}, {likedArtists: likedArtists});
 
-				res.status(200).send('Liked artist ' + req.params.artistId);
+				res.status(200).send('Liked artist ' + req.body.artistId);
 			}
 		}
 	});
@@ -98,10 +98,10 @@ function LikeArtistById(req, res) {
 
 // Saves a new artist, exposed at POST /artists
 function UnlikeArtistById(req, res) {
-	var artistResult = mongoConnection.queryFromMongoDB('Artists', {'id': req.params.artistId});
+	var artistResult = mongoConnection.queryFromMongoDB('Artists', {'id': req.body.artistId});
 	artistResult.then(async function (result) {
 		if (result.length < 1) {
-			res.status(404).send('The artist with the ID ' + req.params.artistId + " was not found!");
+			res.status(404).send('The artist with the ID ' + req.body.artistId + " was not found!");
 		}
 		else {
 			if (req.session.token == null){
@@ -124,18 +124,18 @@ function UnlikeArtistById(req, res) {
 				}
 
 				// Remove the unliked artist
-				var index = likedArtists.indexOf(req.params.artistId);
+				var index = likedArtists.indexOf(req.body.artistId);
 				if (index > -1) {
 					likedArtists.splice(index, 1);
 					if (result[0].likes === undefined) { result[0].likes = 1; }
 					result[0].likes--;
-					await mongoConnection.updateMongoDB('Artists', {'id': req.params.artistId}, {likes: result[0].likes});
+					await mongoConnection.updateMongoDB('Artists', {'id': req.body.artistId}, {likes: result[0].likes});
 				}
 				// REPLACE THE EMAIL WITH req.session.token.email IT SHOULD WORK IF YOU'RE USING A REAL WEB APP!
 				await mongoConnection.updateMongoDB('users', {'email': 'talfin84@gmail.com'}, {likedArtists: likedArtists});
 				//await mongoConnection.updateMongoDB('users', {'email': email}, {likedartists: likedartists});
 
-				res.status(200).send('Unliked artist ' + req.params.artistId);
+				res.status(200).send('Unliked artist ' + req.body.artistId);
 			}
 		}
 	});

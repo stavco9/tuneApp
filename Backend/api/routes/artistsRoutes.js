@@ -18,6 +18,12 @@ module.exports = function(app) {
       }))
 
   app.use(cookieParser());
+  
+  // Parse URL-encoded bodies (as sent by HTML forms)
+  app.use(express.urlencoded());
+
+  // Parse JSON bodies (as sent by API clients)
+  app.use(express.json());
 
   // artistsController Routes
   app.route('/artists')
@@ -32,10 +38,18 @@ module.exports = function(app) {
     .put(artistsController.UpdateArtistById)
     .delete(artistsController.DeleteArtistById);
 
-  app.route('/artists/like/:artistId')
+  // Body format for POST request
+  //{
+  //  "artistId": "dsgkkld"
+  //}
+  app.route('/artists/like/')
       .post(artistsController.LikeArtistById);
 
-  app.route('/artists/unlike/:artistId')
+  // Body format for POST request
+  //{
+  //  "artistId": "dsgkkld"
+  //}
+  app.route('/artists/unlike/')
       .post(artistsController.UnlikeArtistById);
 
   //app.route('/artists/similar/:artistId')
