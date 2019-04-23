@@ -7,9 +7,8 @@
         {
             "type": "node",
             "request": "launch",
-            //"name": "Launch Program",
-            //"program": "${workspaceRoot}\\index.js",
-            //"runtimeExecutable": "C:\\Program Files\\nodejs"
+            "name": "Launch Program",
+            "program": "${workspaceRoot}\\server.js",
         }
     ]
 }
