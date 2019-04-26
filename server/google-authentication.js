@@ -2,7 +2,7 @@ const {google} = require('googleapis');
 require('dotenv').config({path: __dirname+'/tuneApp.env'});
 const express = require('express');
 const session = require('express-session');
-const app = require('./server');
+const app = require('./index.js');
 
 const googleConfig = {
     clientId: process.env.GOOGLE_CLIENT_ID, // e.g. asdfghjkljhgfdsghjk.apps.googleusercontent.com
@@ -49,7 +49,6 @@ function getGooglePlusApi(auth) {
 
 /**********/
 /** MAIN **/
-/**********/
 
 module.exports = {
     /**

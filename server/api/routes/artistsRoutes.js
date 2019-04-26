@@ -9,7 +9,6 @@ const artistsController = require('../controllers/artistsController');
 var app = express();
 
 module.exports = function(app) {
-
   app.use(session({
       secret: 'keyboard cat',
       resave: false,
