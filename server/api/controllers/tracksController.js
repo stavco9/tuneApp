@@ -11,7 +11,7 @@ const searchKeys = [ 'a', 'e', 'i', 'o', 'u', 'er', 'ar', 'or', 'de', 'do' ];
 
 const spotifyBaseUrl = "https://api.spotify.com/v1/";
 
-var polling = asyncPolling(function(req, res){
+/*var polling = asyncPolling(function(req, res){
 
 	var result = {};
 
@@ -21,7 +21,7 @@ var polling = asyncPolling(function(req, res){
 	// random key search letter from a constant array
 	//keyLetter = searchKeys[Math.floor(Math.random()*searchKeys.length)];
 	keyLetter = 'a';
-	
+
 	// When the access token is given
 	spotify_access_token_promise.then(async function(spotify_access_token){
 
@@ -125,7 +125,7 @@ function sleep(ms) {
 
 polling.on('result', function (tracks) {
     tracks.forEach(async track => {
-	
+
 		var albumResult = await mongoConnection.queryFromMongoDB('Albums', {'id': track.album.id});
 
 		if (albumResult.length < 1){
@@ -141,6 +141,7 @@ polling.on('result', function (tracks) {
 		})
 	});
 });
+*/
 
 // Get all tracks from DB
 async function getAllTracks(req, res) {
@@ -305,6 +306,7 @@ function ConvertAudioFeaturesJsonToArray(json) {
     features.push(json.valence);
     features.push(json.tempo);
     features.push(json.time_signature);
+
     return features;
 }
 
@@ -359,7 +361,7 @@ async function GetTopTracks(req, res) {
 }
 
 module.exports = {
-	tracksPolling: polling.run(),
+	//tracksPolling: polling.run(),
 	getAllTracks: getAllTracks,
 	AddNewTrack: AddNewTrack,
 	GetTrackById: GetTrackById,
