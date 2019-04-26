@@ -1,9 +1,9 @@
 import React, {Component} from 'react';
 import {Provider} from 'react-redux'
-import {NativeRouter, Route} from "react-router-native";
 import store from "./redux/store";
 import LoginPage from "./Components/LoginPage/LoginPage";
-import {View} from 'react-native';
+import Shell from "./Components/Shell/Shell";
+import {Router, Scene, Stack} from "react-native-router-flux";
 
 
 const Props = {};
@@ -11,12 +11,14 @@ const Props = {};
 export default class App extends Component<Props> {
     render() {
         return (
-            <NativeRouter>
+            <Router>
                 <Provider store={store}>
-                    <Route exact path="/" component={LoginPage} />
-                    <Route exact path="/top" component={View} />
+                    <Stack key="root" hideNavBar={true}>
+                        <Scene key="/" component={LoginPage}/>
+                        <Scene key="top" component={Shell}/>
+                    </Stack>
                 </Provider>
-            </NativeRouter>
+            </Router>
         );
     }
 }
