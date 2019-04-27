@@ -7,14 +7,16 @@ const express = require('express');
 const session = require('express-session');
 const app = require('./index');
 
-async function queryFromMongoDB(collectionName, queryField, callback){
+async function queryFromMongoDB(collectionName, queryField, limit, callback){
     
     try{
         const db = await MongoClient.connect(url);
 
         var dbo = db.db(process.env.COLLECTION_NAME);
-            
-        const result = await dbo.collection(collectionName).find(queryField).toArray();
+        
+        limit = limit != undefined ? limit : 0;
+
+        const result = await dbo.collection(collectionName).find(queryField).limit(limit).toArray();
     
         db.close();
     
@@ -25,14 +27,16 @@ async function queryFromMongoDB(collectionName, queryField, callback){
     }
 }
 
-async function queryFromMongoDBSortedMax(collectionName, sortField, limit, callback){
+async function queryFromMongoDBSortedMax(collectionName, queryField, sortField, limit, callback){
 
     try{
         const db = await MongoClient.connect(url);
 
         var dbo = db.db(process.env.COLLECTION_NAME);
 
-        const result = await dbo.collection(collectionName).find().sort(sortField).limit(limit).toArray();
+        limit = limit != undefined ? limit : 0;
+
+        const result = await dbo.collection(collectionName).find(queryField).sort(sortField).limit(limit).toArray();
 
         db.close();
 
