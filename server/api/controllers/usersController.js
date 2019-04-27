@@ -5,14 +5,30 @@ function GetUserIdFromReq(req) {
     return req && req.session && req.session.token && req.session.token.email;
 }
 
-function GetLastActivitiesByUserId(numOfActivities=200) {
-    return []; // DO DATABASE SHIT
+// Get the last listening of the user, sorted from the newest to oldest
+async function GetLastActivitiesByUserId(userId, numOfActivities=300) {
+    return (await mongoConnection.queryFromMongoDBSortedMax('ListeningAndSuggestions', {'email': userId}, {'_id': -1}, numOfActivities));
 }
 
-function GetPreferredTracksByUserId(userId) {
-    let lastActivities = GetLastActivitiesByUserId();
-    let scale = 0;
-    let preferredTracks = lastActivities.map((act) => {
+async function GetPreferredTracksByUserId(userId, numOfActivities=200) {
+    let lastActivities = await GetLastActivitiesByUserId(userId, numOfActivities);
+    let scale = 3;
+
+    let preferredTracks = [];
+
+    for(var act in lastActivities){
+        scale -= 0.01;
+
+        let currTrack = {};
+
+        currTrack['trackId'] = lastActivities[act].trackId;
+        currTrack['score'] = lastActivities[act].score + scale;
+
+        preferredTracks.push(currTrack);
+    }
+
+    /*
+    let preferredTracks = lastActivities((act) => {
         scale += 0.01;
         return {
             trackId: act.trackId,
@@ -21,6 +37,7 @@ function GetPreferredTracksByUserId(userId) {
     }).sort(function(a, b) {
         return b.score - a.score;
     });
+    */
 
     return preferredTracks;
 }

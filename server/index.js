@@ -1,4 +1,4 @@
-import express from 'express';
+const express = require('express');
 const queryString = require('query-string');
 const passport = require('passport');
 const session = require('express-session');
@@ -21,7 +21,7 @@ const spotifyStateKey = 'spotify_auth_state';
 const app = express();
 
 // Registering the artist routes
-import artistRoutes from './api/routes/artistsRoutes';
+const artistRoutes = require('./api/routes/artistsRoutes');
 artistRoutes(app);
 
 // Registering the track routes
@@ -63,16 +63,17 @@ app.get('/', (req, res) => {
 app.get('/home', async(req, res) => {
     res.statusCode = 200;
 
-    const url = googleAuthentication.urlGoogle();
+    //const url = googleAuthentication.urlGoogle();
 
-    res.redirect(url)
+    //res.redirect(url)
+
     if (!req.session.token){
         return res.redirect('/login');
     }
     else{
-        if (!req.session.spotify_access_token){
-            return res.redirect('/get-spotify-token');
-        }
+        //if (!req.session.spotify_access_token){
+        //    return res.redirect('/get-spotify-token');
+        //}
 
         res.setHeader('Content-Type', 'application/json');
 

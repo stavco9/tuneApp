@@ -145,7 +145,7 @@ polling.on('result', function (tracks) {
 
 // Get all tracks from DB
 async function getAllTracks(req, res) {
-	var Alltracks = await mongoConnection.queryFromMongoDB('Tracks', {});
+	var Alltracks = await mongoConnection.queryFromMongoDB('Tracks', {}, 1000);
 
 	res.json(Alltracks);
 }
@@ -354,7 +354,7 @@ async function GetTopTracks(req, res) {
 	if (req.params.limit !== undefined) {
 		limit = parseInt(req.params.limit);
 	}
-	var trackResult = mongoConnection.queryFromMongoDBSortedMax('Tracks', {likes: -1}, limit);
+	var trackResult = mongoConnection.queryFromMongoDBSortedMax('Tracks', {}, {likes: -1}, limit);
 	trackResult.then(function (result) {
 		res.json(result);
 	});
