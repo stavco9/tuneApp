@@ -1,5 +1,5 @@
 //'use strict';
-
+const {PyMachine} = require('../../MachineLearning/PyMachine/pymachine');
 var spotifyAuthentication = require('../../spotify-authentication');
 const mongoConnection = require('../../mongo-connection');
 var asyncPolling = require('async-polling');
@@ -10,6 +10,8 @@ var {PythonShell} = require('python-shell');
 const searchKeys = [ 'a', 'e', 'i', 'o', 'u', 'er', 'ar', 'or', 'de', 'do' ];
 
 const spotifyBaseUrl = "https://api.spotify.com/v1/";
+
+let similarTracksMachine = new PyMachine(__dirname + '/../../MachineLearning/pythonScripts/similarTracks_KNN.py');
 
 var polling = asyncPolling(function(req, res){
 
@@ -312,9 +314,9 @@ function ConvertAudioFeaturesJsonToArray(json) {
 async function GetSimilarTracksById(req, res) {
 	let trackId = req.params.trackId;
 	//let userId = usersController.GetUserIdFromReq(req);
-
+	let test = (await mongoConnection.queryFromMongoDBSortedMax('AudioFeatures', {}, 10));
     let trackFeatures = ConvertAudioFeaturesJsonToArray((await mongoConnection.queryFromMongoDB('AudioFeatures', {'id': trackId}))[0]);
-    let allTracksFeatures = (await mongoConnection.queryFromMongoDB('AudioFeatures', {})).map((j) => {
+    let allTracksFeatures = (await mongoConnection.queryFromMongoDBSortedMax('AudioFeatures', {}, 200)).map((j) => {
         return ConvertAudioFeaturesJsonToArray(j);
     });
 
@@ -327,23 +329,14 @@ async function GetSimilarTracksById(req, res) {
 
     /*let allTracksFeatures = allTrackIds.map((t) => {
         mongoConnection.queryFromMongoDB('AudioFeatures', {'id': t.trackId})
-    });*/
-
-    PythonShell.run('D:\\tuneapp\\python\\NearestNeighbors.py', {pythonOptions: ['-u'], args: [allTracksFeatures, trackFeatures]}, function (err, results) {
-    	console.log("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-        console.log(results);
-        /*var y = JSON.parse(results).map((i) => {
-            return allTracksFeatures[i];
-        });*/
-        return results;
-    });
-    /*PythonShell.run('D:\\tuneapp\\python\\NearestNeighbors.py', { mode: 'json', args: [allTracksFeatures, trackFeatures]}, function (err, results) {
-        console.log(results);
-        var y = JSON.parse(results).map((i) => {
-            return allTracksFeatures[i];
-		});
-        return y;
-    });*/
+	});*/
+	
+	await similarTracksMachine.run({
+		'y': trackFeatures,
+		'X': allTracksFeatures
+	}).then((results) => {
+		console.log(results);
+	})
 }
 
 // tracks/top/trackId
@@ -359,7 +352,7 @@ async function GetTopTracks(req, res) {
 }
 
 module.exports = {
-	tracksPolling: polling.run(),
+	//tracksPolling: polling.run(),
 	getAllTracks: getAllTracks,
 	AddNewTrack: AddNewTrack,
 	GetTrackById: GetTrackById,
