@@ -1,40 +1,24 @@
 import React, {Component} from 'react';
-import {Platform, StyleSheet, Text, View} from 'react-native';
+import {Provider} from 'react-redux'
+import store from "./redux/store";
+import LoginPage from "./Components/LoginPage/LoginPage";
+import Shell from "./Components/Shell/Shell";
+import {Router, Scene, Stack} from "react-native-router-flux";
 
-const instructions = Platform.select({
-  ios: 'NOT NOIIIIICE',
-  android:
-    'NOIIIIICE',
-});
 
-type Props = {};
+const Props = {};
+
 export default class App extends Component<Props> {
-  render() {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.welcome}>Welcome to TuneApp</Text>
-        <Text style={styles.instructions}>YO MAMA</Text>
-        <Text style={styles.instructions}>{instructions}</Text>
-      </View>
-    );
-  }
+    render() {
+        return (
+            <Router>
+                <Provider store={store}>
+                    <Stack key="root" hideNavBar={true}>
+                        <Scene key="/" component={LoginPage}/>
+                        <Scene key="top" component={Shell}/>
+                    </Stack>
+                </Provider>
+            </Router>
+        );
+    }
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5FCFF',
-  },
-  welcome: {
-    fontSize: 20,
-    textAlign: 'center',
-    margin: 10,
-  },
-  instructions: {
-    textAlign: 'center',
-    color: '#333333',
-    marginBottom: 5,
-  },
-});

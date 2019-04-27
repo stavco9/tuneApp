@@ -32,6 +32,17 @@ function getDate(){
 
 async function buildPlaylist(req, res){
 
+	// In production, unmark all the comments of user details
+	//if (!req.session.token){
+	//	res.status(401).send('Unauthorized !! Please login');
+	//}
+	//else{
+
+		userId = "stavco9@gmail.com";
+
+		var preferredTracks = await usersController.GetPreferredTracksByUserId(userId);
+
+	//}
 }
 
 async function listenPlaylist(req, res){
@@ -43,25 +54,50 @@ async function listenPlaylist(req, res){
 	//else{
 
 		var currentTime = getDate();
+
 		var startListeningTime = moment(req.body.startListeningTime, 'YYYY-MM-DD HH:mm:ss');
 
-		var listeningData = {
-			trackId: req.body.trackId,
-			//userId: req.session.token.email,
-			dateTime: currentTime,
-			duration: moment(currentTime, 'YYYY-MM-DD HH:mm:ss').diff(startListeningTime, 'seconds'),
-			isListened: req.body.isListened,
-			isSelectedByUser: req.body.isSelectedByUser
-		};
+		var trackId = req.body.trackId;
 
-		try{
-			await mongoConnection.addToMongoDB('ListeningAndSuggestions', listeningData);
-		}
-		catch{
-			res.status(500).send("Error while processing this request");	
-		}
+		var durationOfListening = moment(currentTime, 'YYYY-MM-DD HH:mm:ss').diff(startListeningTime, 'milliseconds');
 
-		res.status(200).send("success");
+		var trackromDB = await mongoConnection.queryFromMongoDB('Tracks', {'id': trackId});
+
+		if(trackromDB.length < 1){
+			res.status(404).send("Track " + trackId + " not found");
+		}
+		else{
+			var listeningPercent = (durationOfListening * 100 / trackromDB[0].duration_ms);
+
+			var score = (listeningPercent - 70) / 10;
+
+			if (req.body.isSelectedByUser == "true"){
+				score += 2;
+			}
+
+			var listeningData = {
+				trackId: req.body.trackId,
+				email: "stavco9@gmail.com",
+				//email: req.session.token.email,
+				dateTime: currentTime,
+				duration: durationOfListening,
+				listeningPercent: listeningPercent,
+				score: score,
+				isListened: req.body.isListened,
+				isSelectedByUser: req.body.isSelectedByUser
+			};
+	
+			try{
+				await mongoConnection.addToMongoDB('ListeningAndSuggestions', listeningData);
+
+				//res.status(200).send(listeningData);
+			}
+			catch{
+				res.status(500).send("Error while processing this request");	
+			}
+	
+			res.status(200).send("success");
+		}
 	//}
 }
 

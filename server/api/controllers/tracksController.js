@@ -23,7 +23,7 @@ var polling = asyncPolling(function(req, res){
 	// random key search letter from a constant array
 	//keyLetter = searchKeys[Math.floor(Math.random()*searchKeys.length)];
 	keyLetter = 'a';
-	
+
 	// When the access token is given
 	spotify_access_token_promise.then(async function(spotify_access_token){
 
@@ -127,7 +127,7 @@ function sleep(ms) {
 
 polling.on('result', function (tracks) {
     tracks.forEach(async track => {
-	
+
 		var albumResult = await mongoConnection.queryFromMongoDB('Albums', {'id': track.album.id});
 
 		if (albumResult.length < 1){
@@ -146,7 +146,7 @@ polling.on('result', function (tracks) {
 
 // Get all tracks from DB
 async function getAllTracks(req, res) {
-	var Alltracks = await mongoConnection.queryFromMongoDB('Tracks', {});
+	var Alltracks = await mongoConnection.queryFromMongoDB('Tracks', {}, 1000);
 
 	res.json(Alltracks);
 }
@@ -307,6 +307,7 @@ function ConvertAudioFeaturesJsonToArray(json) {
     features.push(json.valence);
     features.push(json.tempo);
     features.push(json.time_signature);
+
     return features;
 }
 
@@ -345,7 +346,7 @@ async function GetTopTracks(req, res) {
 	if (req.params.limit !== undefined) {
 		limit = parseInt(req.params.limit);
 	}
-	var trackResult = mongoConnection.queryFromMongoDBSortedMax('Tracks', {likes: -1}, limit);
+	var trackResult = mongoConnection.queryFromMongoDBSortedMax('Tracks', {}, {likes: -1}, limit);
 	trackResult.then(function (result) {
 		res.json(result);
 	});

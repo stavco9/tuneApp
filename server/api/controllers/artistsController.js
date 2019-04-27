@@ -147,7 +147,7 @@ async function GetTopArtists(req, res) {
 	if (req.params.limit !== undefined) {
 		limit = parseInt(req.params.limit);
 	}
-	var artistResult = mongoConnection.queryFromMongoDBSortedMax('Artists', {likes: -1}, limit);
+	var artistResult = mongoConnection.queryFromMongoDBSortedMax('Artists', {}, {likes: -1}, limit);
 	artistResult.then(function (result) {
 		res.json(result);
 	});

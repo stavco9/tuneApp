@@ -2,8 +2,8 @@ const express = require('express');
 const queryString = require('query-string');
 const passport = require('passport');
 const session = require('express-session');
-var request = require('request'); // "Request" library
-var cookieParser = require('cookie-parser');
+const request = require('request');
+const cookieParser = require('cookie-parser');
 
 require('dotenv').config({path: __dirname+'/tuneApp.env'});
 
@@ -12,8 +12,6 @@ const http = require('http');
 const googleAuthentication = require('./google-authentication');
 const spotifyAuthentication = require('./spotify-authentication');
 const mongoConnection = require('./mongo-connection');
-//const artistsController = require('./api/controllers/artistsController');
-//const tracksController = require('./api/controllers/tracksController');
 
 const hostname = '127.0.0.1';
 const port = 8080;
@@ -23,23 +21,23 @@ const spotifyStateKey = 'spotify_auth_state';
 const app = express();
 
 // Registering the artist routes
-var artistRoutes = require('./api/routes/artistsRoutes'); 
+const artistRoutes = require('./api/routes/artistsRoutes');
 artistRoutes(app);
 
 // Registering the track routes
-var trackRoutes = require('./api/routes/tracksRoutes'); 
+const trackRoutes = require('./api/routes/tracksRoutes');
 trackRoutes(app);
 
 // Registering the album routes
-var albumRoutes = require('./api/routes/albumsRoutes'); 
+const albumRoutes = require('./api/routes/albumsRoutes');
 albumRoutes(app);
 
 // Registering the user routes
-var userRoutes = require('./api/routes/usersRoutes'); 
+const userRoutes = require('./api/routes/usersRoutes');
 userRoutes(app);
 
 // Registering the user routes
-var playlistRoutes = require('./api/routes/playlistRoute'); 
+const playlistRoutes = require('./api/routes/playlistRoute');
 playlistRoutes(app);
 
 app.use(session({
@@ -47,11 +45,13 @@ app.use(session({
     resave: false,
     saveUninitialized: true,
     cookie:{ maxAge: 2*60*60*1000} // two hours
-    }))
+    }));
 
 app.use(cookieParser());
 
 app.get('/', (req, res) => {
+    const googleUrl = googleAuthentication.urlGoogle();
+    const spotifyUrl = spotifyAuthentication.getSpofityUrl();
     if (req.session.token){
         return res.redirect('/home');
     }
@@ -63,20 +63,21 @@ app.get('/', (req, res) => {
 app.get('/home', async(req, res) => {
     res.statusCode = 200;
 
-    var url = googleAuthentication.urlGoogle();
+    //const url = googleAuthentication.urlGoogle();
+
+    //res.redirect(url)
 
     if (!req.session.token){
         return res.redirect('/login');
     }
     else{
-        if (!req.session.spotify_access_token){
-            return res.redirect('/get-spotify-token');   
-        }
+        //if (!req.session.spotify_access_token){
+        //    return res.redirect('/get-spotify-token');
+        //}
 
         res.setHeader('Content-Type', 'application/json');
 
         try{
-
             if (!req.session.userDetailsFromDB){
                 req.session.userDetailsFromDB = await mongoConnection.queryFromMongoDB('users', {'email': req.session.token.email});
                 //req.session.userDetailsFromDB = mongoConnection.queryFromMongoDB('users', {});
@@ -98,7 +99,7 @@ app.get('/home', async(req, res) => {
         catch(error){
             console.log(error);
         }
-        
+
         //artistsController.getAllArtists(req, res);
 
         //tracksController.tracksPolling();
@@ -155,25 +156,25 @@ app.get('/remove-account', async (req, res) => {
 });
 
 app.get('/google-auth', async(req, res, next) => {
-    var code = queryString.parseUrl(req.url).query.code;
-    
+    const code = queryString.parseUrl(req.url).query.code;
+
     const token = await googleAuthentication.getGoogleAccountFromCode(code);
-    
+
     req.session.token = token;
-    
+
     res.statusCode = 200;
-    
+
     res.redirect('/home');
-    }); 
+    });
 
 app.get('/spotify-auth', (req, res, next) => {
     spotifyAuthentication.getAccessToken(req, res, next);
-}); 
+});
 
 app.get('/get-spotify-token', (req, res) =>{
     spotifyAuthentication.getAccessTokenForAPI(req, res);
 });
-    
+
 
 app.listen(port, hostname, () => {
     console.log(`Server running at http://${hostname}:${port}/`);
