@@ -13,8 +13,8 @@ const googleAuthentication = require('./google-authentication');
 const spotifyAuthentication = require('./spotify-authentication');
 const mongoConnection = require('./mongo-connection');
 
-const hostname = '127.0.0.1';
-const port = 8080;
+const hostname = process.env.HOSTNAME;
+const port = process.env.PORT;
 
 const spotifyStateKey = 'spotify_auth_state';
 
@@ -106,6 +106,35 @@ app.get('/home', async(req, res) => {
         res.send(req.session.token);
     }
 });
+
+app.get('/login/google', (req, res) => {
+    res.statusCode = 200;
+
+    var googleUrl = googleAuthentication.urlGoogle();
+
+    if (req.session.token){
+        return res.redirect('/home');
+    }
+    else{
+        return res.redirect(googleUrl);
+    }
+});
+
+app.get('/login/spotify', (req, res) => {
+    res.statusCode = 200;
+
+    var spotifyUrl = spotifyAuthentication.getSpofityUrl();
+
+    res.cookie(spotifyStateKey, queryString.parseUrl(spotifyUrl).query.state);
+
+    if (req.session.token){
+        return res.redirect('/home');
+    }
+    else{
+        return res.redirect(spotifyUrl);
+    }
+});
+
 
 app.get('/login', (req, res) => {
 
