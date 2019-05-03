@@ -9,6 +9,10 @@ async function GetLastActivitiesByUserId(userId, numOfActivities=300) {
     return (await mongoConnection.queryFromMongoDBSortedMax('ListeningAndSuggestions', {'email': userId}, {'_id': -1}, numOfActivities));
 }
 
+async function GetUserInfo(userId){
+    return (await mongoConnection.queryFromMongoDB('users', {'email': userId}))[0];
+ }
+
 async function GetPreferredTracksByUserId(userId, numOfActivities=300) {
     let preferredTracks = {};
     let lastActivities = (await GetLastActivitiesByUserId(userId, numOfActivities)).reverse();
