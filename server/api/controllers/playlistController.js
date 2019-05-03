@@ -38,7 +38,7 @@ async function buildPlaylist(req, res){
 	//}
 	//else{
 
-		userId = "stavco9@gmail.com";
+		userId = "talfin84@gmail.com";
 
 		var preferredTracks = await usersController.GetPreferredTracksByUserId(userId);
 
@@ -69,15 +69,15 @@ async function listenPlaylist(req, res){
 		else{
 			var listeningPercent = (durationOfListening * 100 / trackromDB[0].duration_ms);
 
-			var score = (listeningPercent - 70) / 10;
+			var score = (listeningPercent - 50) / 10;
 
 			if (req.body.isSelectedByUser == "true"){
-				score += 2;
+				score += 1;
 			}
 
 			var listeningData = {
 				trackId: req.body.trackId,
-				email: "stavco9@gmail.com",
+				email: "talfin84@gmail.com",
 				//email: req.session.token.email,
 				dateTime: currentTime,
 				duration: durationOfListening,

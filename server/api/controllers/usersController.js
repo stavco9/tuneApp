@@ -6,26 +6,60 @@ function GetUserIdFromReq(req) {
 }
 
 // Get the last listening of the user, sorted from the newest to oldest
-async function GetLastActivitiesByUserId(userId, numOfActivities=300) {
+async function GetLastActivitiesByUserId(userId, numOfActivities=200) {
     return (await mongoConnection.queryFromMongoDBSortedMax('ListeningAndSuggestions', {'email': userId}, {'_id': -1}, numOfActivities));
+}
+
+async function GetUserInfo(userId){
+   return (await mongoConnection.queryFromMongoDB('users', {'email': userId}))[0];
 }
 
 async function GetPreferredTracksByUserId(userId, numOfActivities=200) {
     let lastActivities = await GetLastActivitiesByUserId(userId, numOfActivities);
-    let scale = 3;
+    let scale = 2;
+
+    let likes = [];
+    let unlikes = [];
+
+    let userInfo = await GetUserInfo(userId);
+
+    if (userInfo.hasOwnProperty('likedTracks')){
+        likes = userInfo.likedTracks;
+    }
+
+    if (userInfo.hasOwnProperty('unlikedTracks')){
+        unlikes = userInfo.unlikedTracks;
+    }
 
     let preferredTracks = [];
 
-    for(var act in lastActivities){
+    lastActivities.forEach(act => {
         scale -= 0.01;
+
+        let liked = 0;
 
         let currTrack = {};
 
-        currTrack['trackId'] = lastActivities[act].trackId;
-        currTrack['score'] = lastActivities[act].score + scale;
+        currTrack['trackId'] = act.trackId;
+
+        // If the user liked the track
+        likes.forEach(trackId => {
+            if (act.trackId == trackId) liked += 2; 
+        });
+
+        // If the track is not in the liked list
+        if (liked == 0){
+
+            // If the user unliked the track
+            unlikes.forEach(trackId =>{
+                if (act.trackId == trackId) liked -= 2;
+            });
+        }
+        
+        currTrack['score'] = (act.score + scale + liked);
 
         preferredTracks.push(currTrack);
-    }
+    });
 
     /*
     let preferredTracks = lastActivities((act) => {
