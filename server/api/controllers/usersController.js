@@ -1,5 +1,4 @@
 const mongoConnection = require('../../mongo-connection');
-const request = require('request'); // "Request" library
 
 function GetUserIdFromReq(req) {
     return req && req.session && req.session.token && req.session.token.email;
@@ -10,36 +9,48 @@ async function GetLastActivitiesByUserId(userId, numOfActivities=300) {
     return (await mongoConnection.queryFromMongoDBSortedMax('ListeningAndSuggestions', {'email': userId}, {'_id': -1}, numOfActivities));
 }
 
-async function GetPreferredTracksByUserId(userId, numOfActivities=200) {
-    let lastActivities = await GetLastActivitiesByUserId(userId, numOfActivities);
-    let scale = 3;
+async function GetPreferredTracksByUserId(userId, numOfActivities=300) {
+    let preferredTracks = {};
+    let lastActivities = (await GetLastActivitiesByUserId(userId, numOfActivities)).reverse();
+    let likes = [];
+    let unlikes = [];
+    let userInfo = await GetUserInfo(userId);
 
-    let preferredTracks = [];
-
-    for(var act in lastActivities){
-        scale -= 0.01;
-
-        let currTrack = {};
-
-        currTrack['trackId'] = lastActivities[act].trackId;
-        currTrack['score'] = lastActivities[act].score + scale;
-
-        preferredTracks.push(currTrack);
+    if (userInfo.hasOwnProperty('likedTracks')){
+        likes = userInfo.likedTracks;
+    }
+    if (userInfo.hasOwnProperty('unlikedTracks')){
+        unlikes = userInfo.unlikedTracks;
     }
 
-    /*
-    let preferredTracks = lastActivities((act) => {
+    let scale = 0;
+    lastActivities.forEach((act) => {
         scale += 0.01;
-        return {
-            trackId: act.trackId,
-            score: act.score * scale
+        if(preferredTracks[act.trackId] === undefined) {
+            preferredTracks[act.trackId] = 0;
         }
-    }).sort(function(a, b) {
-        return b.score - a.score;
+        preferredTracks[act.trackId] += act.score * scale;
     });
-    */
 
-    return preferredTracks;
+    likes.forEach((t) => {
+        if(preferredTracks[t] === undefined) {
+            preferredTracks[t] = 0;
+        }
+        preferredTracks[t] += 2;
+    });
+
+    unlikes.forEach((t) => {
+        if(preferredTracks[t] === undefined) {
+            preferredTracks[t] = 0;
+        }
+        preferredTracks[t] -= 2;
+    });
+    
+    return (Object.keys(preferredTracks)
+        .filter(t => preferredTracks[t] > 0)
+        .sort(function(a, b) {
+            return preferredTracks[b] - preferredTracks[a];
+        }));
 }
 
 function GetUnfamilliarTracksByUserId(userId) {
