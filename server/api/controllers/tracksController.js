@@ -6,7 +6,7 @@ var asyncPolling = require('async-polling');
 const request = require('request'); // "Request" library
 const reqPromise = require('request-promise');
 var {PythonShell} = require('python-shell');
-//const usersController = require('usersController');
+const usersController = require('usersController');
 const searchKeys = [ 'a', 'e', 'i', 'o', 'u', 'er', 'ar', 'or', 'de', 'do' ];
 
 const spotifyBaseUrl = "https://api.spotify.com/v1/";
@@ -321,23 +321,22 @@ async function GetSimilarTracksById(req, res) {
         return ConvertAudioFeaturesJsonToArray(j);
     });
 
-	/*
-	let preferredTracks = usersController.GetPreferredTracksByUserId(userId);
+	
+	let preferredTracks = usersController.GetPreferredTracksByUserId(userId, 1000);
 	let unfamilliarTracks = usersController.GetUnfamilliarTracksByUserId(userId);
 
 	let allTrackIds = [...new Set([...preferredTracks, ...unfamilliarTracks].map(t => t.trackId))];
-	*/
+	
 
     /*let allTracksFeatures = allTrackIds.map((t) => {
         mongoConnection.queryFromMongoDB('AudioFeatures', {'id': t.trackId})
 	});*/
 	
-	await similarTracksMachine.run({
+	let similar = await similarTracksMachine.run({
 		'y': trackFeatures,
 		'X': allTracksFeatures
-	}).then((results) => {
-		console.log(results);
-	})
+	});
+	console.log(similar);
 }
 
 // tracks/top/trackId

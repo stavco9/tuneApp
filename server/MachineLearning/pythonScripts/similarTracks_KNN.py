@@ -7,7 +7,7 @@ while True:
     j = json.loads(sys.stdin.readline())
     X = np.array(j['X'])
     y = np.array(j['y'])
-    nbrs = NearestNeighbors(n_neighbors=2, algorithm='ball_tree').fit(X)
+    nbrs = NearestNeighbors(n_neighbors=4, algorithm='ball_tree').fit(X)
     result = nbrs.kneighbors([y],return_distance=False)
     print((''.join(str(e) for e in result)).replace(' ',','))
     sys.stdout.flush()
