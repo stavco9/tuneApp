@@ -5,7 +5,7 @@ const mongoConnection = require('../../mongo-connection');
 var asyncPolling = require('async-polling');
 const request = require('request'); // "Request" library
 const reqPromise = require('request-promise');
-const usersController = require('usersController');
+const usersController = require('./usersController');
 const searchKeys = [ 'a', 'e', 'i', 'o', 'u', 'er', 'ar', 'or', 'de', 'do' ];
 
 const spotifyBaseUrl = "https://api.spotify.com/v1/";
