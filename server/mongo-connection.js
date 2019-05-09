@@ -2,7 +2,7 @@ var MongoClient = require('mongodb').MongoClient;
 
 require('dotenv').config({path: __dirname+'/tuneApp.env'});
 
-var url = process.env.CONNECTION_URL + process.env.COLLECTION_NAME; //"mongodb://tune-dev-mdb.westeurope.cloudapp.azure.com:27017/tuneApp";
+var url = ('mongodb://'+ process.env.MONGO_USER_NAME +':'+ process.env.MONGO_PASSWORD + '@'+ process.env.MONGO_HOSTNAME + '/' + process.env.MONGO_DATABASE); //"mongodb://tune-dev-mdb.westeurope.cloudapp.azure.com:27017/tuneApp";
 const express = require('express');
 const session = require('express-session');
 const app = require('./index');
@@ -12,7 +12,7 @@ async function queryFromMongoDB(collectionName, queryField, limit, callback){
     try{
         const db = await MongoClient.connect(url);
 
-        var dbo = db.db(process.env.COLLECTION_NAME);
+        var dbo = db.db(process.env.MONGO_DATABASE);
         
         limit = limit != undefined ? limit : 0;
 
@@ -32,7 +32,7 @@ async function queryFromMongoDBSortedMax(collectionName, queryField, sortField, 
     try{
         const db = await MongoClient.connect(url);
 
-        var dbo = db.db(process.env.COLLECTION_NAME);
+        var dbo = db.db(process.env.MONGO_DATABASE);
 
         limit = limit != undefined ? limit : 0;
 
@@ -52,7 +52,7 @@ async function addToMongoDB(collectionName, jsonData){
     try{
         const db = await MongoClient.connect(url);
 
-        var dbo = db.db(process.env.COLLECTION_NAME);
+        var dbo = db.db(process.env.MONGO_DATABASE);
 
         await dbo.collection(collectionName).insert(jsonData);
 
@@ -68,7 +68,7 @@ async function updateMongoDB(collectionName, queryField, updateData){
     try{
         const db = await MongoClient.connect(url);
 
-        var dbo = db.db(process.env.COLLECTION_NAME);
+        var dbo = db.db(process.env.MONGO_DATABASE);
         
         await dbo.collection(collectionName).update(queryField, {$set: updateData});
 
@@ -84,7 +84,7 @@ async function deleteFromMongoDB(collectionName, queryField){
     try{
         const db = await MongoClient.connect(url);
 
-        var dbo = db.db(process.env.COLLECTION_NAME);
+        var dbo = db.db(process.env.MONGO_DATABASE);
         
         await dbo.collection(collectionName).remove(queryField);
 
