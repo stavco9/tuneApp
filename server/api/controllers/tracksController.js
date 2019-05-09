@@ -397,7 +397,7 @@ async function GetTopTracks(req, res) {
 }
 
 module.exports = {
-	tracksPolling: polling.run(),
+	//tracksPolling: polling.run(),
 	getAllTracks: getAllTracks,
 	AddNewTrack: AddNewTrack,
 	GetTrackById: GetTrackById,
