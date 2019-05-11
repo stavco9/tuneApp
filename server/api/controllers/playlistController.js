@@ -37,7 +37,7 @@ async function buildPlaylist(req, res){
 	//}
 	//else{
 
-		userId = "talfin84@gmail.com";
+		userId = "stavco9@gmail.com";
 
 		let [familliarTracks, unfamilliarTracks, userPreferencesNN] = await Promise.all([
 			usersController.GetFamilliarTracksByUserId(userId),
@@ -81,7 +81,7 @@ async function listenPlaylist(req, res){
 
 			var listeningData = {
 				trackId: req.body.trackId,
-				email: "talfin84@gmail.com",
+				email: "stavco9@gmail.com",
 				//email: req.session.token.email,
 				dateTime: currentTime,
 				duration: durationOfListening,
