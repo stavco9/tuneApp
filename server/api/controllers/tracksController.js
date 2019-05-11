@@ -172,7 +172,8 @@ function GetTrackById(req, res) {
 		GetTopTracks(req, res);
 	}
 	else {
-		var trackResult = mongoConnection.queryFromMongoDB('Tracks', {'id': req.params.trackId});
+		var trackResult = mongoConnection.queryFromMongoDBJoin('Tracks', 'AudioFeatures', 'id', 'id', {'id': req.params.trackId});
+
 		trackResult.then(function (result) {
 			if (result.length < 1) {
 				res.status(404).send('The track with the ID ' + req.params.trackId + " was not found!");
