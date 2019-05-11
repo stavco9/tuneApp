@@ -71,6 +71,9 @@ async function queryFromMongoDBJoin(firstCollectionName, secondCollectionName, f
         },
         {
             $limit: limit
+        },
+        {
+            $unwind: ("$" + secondCollectionName)
         }]).toArray();
 
         db.close();
