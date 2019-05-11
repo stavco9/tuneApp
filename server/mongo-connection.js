@@ -14,7 +14,7 @@ async function queryFromMongoDB(collectionName, queryField, limit, callback){
 
         var dbo = db.db(process.env.MONGO_DATABASE);
         
-        limit = limit != undefined ? limit : 0;
+        limit = limit != undefined ? limit : 1000;
 
         const result = await dbo.collection(collectionName).find(queryField).limit(limit).toArray();
     
@@ -34,9 +34,44 @@ async function queryFromMongoDBSortedMax(collectionName, queryField, sortField, 
 
         var dbo = db.db(process.env.MONGO_DATABASE);
 
-        limit = limit != undefined ? limit : 0;
+        limit = limit != undefined ? limit : 1000;
 
         const result = await dbo.collection(collectionName).find(queryField).sort(sortField).limit(limit).toArray();
+
+        db.close();
+
+        return result;
+    }
+    catch(err){
+        throw err;
+    }
+}
+
+async function queryFromMongoDBJoin(firstCollectionName, secondCollectionName, firstCollectionField, secondCollectionField, matchField, limit, callback){
+
+    try{
+        const db = await MongoClient.connect(url);
+
+        var dbo = db.db(process.env.MONGO_DATABASE);
+
+        limit = limit != undefined ? limit : 1000;
+
+        const result = await dbo.collection(firstCollectionName).aggregate([
+        {   
+            $match: matchField
+        },
+        {
+            $lookup:
+            {
+                from: secondCollectionName,
+                localField: secondCollectionField,
+                foreignField: firstCollectionField,
+                as: secondCollectionName
+            }
+        },
+        {
+            $limit: limit
+        }]).toArray();
 
         db.close();
 
@@ -100,5 +135,6 @@ module.exports = {
     addToMongoDB: addToMongoDB,
     updateMongoDB: updateMongoDB,
     deleteFromMongoDB: deleteFromMongoDB,
-    queryFromMongoDBSortedMax: queryFromMongoDBSortedMax
+    queryFromMongoDBSortedMax: queryFromMongoDBSortedMax,
+    queryFromMongoDBJoin: queryFromMongoDBJoin
 };
