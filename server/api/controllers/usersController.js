@@ -21,11 +21,11 @@ async function GetUserInfo(userId){
 // returns
 // [
 //     {
-//          trackId
+//          id (of track)
 //          name
 //          AudioFeatures
 //          ...
-//          score
+//          scoreForUser
 //      }
 // ]
 async function GetFamilliarTracksByUserId(userId, numOfActivities=300) {
@@ -65,24 +65,27 @@ async function GetFamilliarTracksByUserId(userId, numOfActivities=300) {
         preferredTracks[t] -= 2;
     });
     
-    return (Object.keys(preferredTracks)
-        .sort(function(a, b) {
-            return preferredTracks[b] - preferredTracks[a];
-        })
-        // LIOR: HERE, MAKE A QUERY AND RETURN FULL TRACK OBJECT.
-        // THEN ADD A SCORE PROPERTY TO THE RETURNED TRACK OBJECT
-        .map((t) => {
-            return {
-                trackId: t,
-                score: preferredTracks[b]
-            }
-        }));
+
+    let trackObjects = mongoConnection.queryFromMongoDBJoin('Tracks', 'AudioFeatures', 'id', 'id',
+        {'id': {
+            $in: Object.keys(preferredTracks)
+        }
+    });
+
+    Object.keys(preferredTracks).forEach((k) => {
+        trackObjects.find((o) => o.trackId == k).scoreForUser = preferredTracks[k].score;
+    });
+    trackObjects.sort(function(a, b) {
+        return b.scoreForUser - a.scoreForUser;
+    });
+
+    return trackObjects;
 }
 
 // =====   out:   =====
 // [
 //     {
-//         trackId
+//         id (of track)
 //         name
 //         AudioFeatures: {
 //             ...
@@ -92,13 +95,13 @@ async function GetFamilliarTracksByUserId(userId, numOfActivities=300) {
 // ]
 async function GetPreferredTracksByUserId(userId, numOfActivities=300) {
     return (GetFamilliarTracksByUserId(userId, numOfActivities)
-        .filter(t => t.score > 0));
+        .filter(t => t.scoreForUser > 0));
 }
 
 // =====   out:   =====
 // [
 //     {
-//         trackId
+//         id (of track)
 //         name
 //         AudioFeatures: {
 //             ...
@@ -106,10 +109,11 @@ async function GetPreferredTracksByUserId(userId, numOfActivities=300) {
 //         ...
 //     }
 // ]
-function GetUnfamilliarPopularTracksByUserId(userId, amout = 100) {
-    // Get the most popular unfamilliar songs,
-    // And the newest unfamilliar songs.
-    return []; // CHANGE THAT LATER
+async function GetUnfamilliarPopularTracksByUserId(userId, numOfActivities=1000) {
+    let familliar = await GetFamilliarTracksByUserId(userId, numOfActivities)
+    let popular = await mongoConnection.queryFromMongoDBSortedMax('Tracks', {}, {'popularity': -1}, familliar.length + 200);
+    
+    return popular.filter((p) => !familliar.some((f) => p.id == f.id));
 }
 
 async function getMyDetails(req, res){

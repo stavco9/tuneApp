@@ -1,9 +1,9 @@
 const {PyMachine} = require('./PyMachine/pymachine');
 
-//let RecommendationsMachine_knn = new PyMachine(__dirname + '/../../MachineLearning/pythonScripts/Recommendations_KNN.py');
-//let RecommendationsMachine_id3 = new PyMachine(__dirname + '/../../MachineLearning/pythonScripts/Recommendations_ID3.py');
-//let RecommendationsMachine_nn = new PyMachine(__dirname + '/../../MachineLearning/pythonScripts/Recommendations_NN.py');
-let similarTracksMachine_knn = new PyMachine(__dirname + '/../MachineLearning/pythonScripts/similarTracks_KNN.py');
+//let RecommendationsMachine_knn = new PyMachine(__dirname + '/pythonScripts/Recommendations_KNN.py');
+//let RecommendationsMachine_id3 = new PyMachine(__dirname + '/pythonScripts/Recommendations_ID3.py');
+//let RecommendationsMachine_nn = new PyMachine(__dirname + '/pythonScripts/Recommendations_NN.py');
+let similarTracksMachine_knn = new PyMachine(__dirname + '/pythonScripts/similarTracks_KNN.py');
 
 // Function names are as follows:
 // [Function goal and returned value type]_[Algorithm used]
@@ -11,7 +11,7 @@ let similarTracksMachine_knn = new PyMachine(__dirname + '/../MachineLearning/py
 // =====   in:   =====
 // familliarTracks: [
 //     {
-//         trackId
+//         id (of track)
 //         AudioFeatures: {
 //             ...
 //         }
@@ -20,7 +20,7 @@ let similarTracksMachine_knn = new PyMachine(__dirname + '/../MachineLearning/py
 // ]
 // testedTracks: [
 //     {
-//         trackId
+//         id (of track)
 //         AudioFeatures: {
 //             ...
 //         }
@@ -31,7 +31,7 @@ let similarTracksMachine_knn = new PyMachine(__dirname + '/../MachineLearning/py
 // =====   out:   =====
 // [
 //     {
-//         trackId
+//         id (of track)
 //         ...
 //     }
 // ]
@@ -63,7 +63,7 @@ async function classifyForRecommendedTracks_knn(familliarTracks, testedTracks) {
 // =====   in:   =====
 // familliarTracks: [
 //     {
-//         trackId
+//         id (of track)
 //         AudioFeatures: {
 //             ...
 //         }
@@ -72,7 +72,7 @@ async function classifyForRecommendedTracks_knn(familliarTracks, testedTracks) {
 // ]
 // testedTracks: [
 //     {
-//         trackId
+//         id (of track)
 //         AudioFeatures: {
 //             ...
 //         }
@@ -83,7 +83,7 @@ async function classifyForRecommendedTracks_knn(familliarTracks, testedTracks) {
 // =====   out:   =====
 // [
 //     {
-//         trackId
+//         id (of track)
 //         ...
 //     }
 // ]
@@ -118,7 +118,7 @@ async function classifyForRecommendedTracks_id3(familliarTracks, testedTracks) {
 // ]
 // testedTracks: [
 //     {
-//         trackId
+//         id (of track)
 //         AudioFeatures: {
 //             ...
 //         }
@@ -129,7 +129,7 @@ async function classifyForRecommendedTracks_id3(familliarTracks, testedTracks) {
 // =====   out:   =====
 // [
 //     {
-//         trackId
+//         id (of track)
 //         ...
 //     }
 // ]
@@ -162,7 +162,7 @@ async function classifyForRecommendedTracks_neuralnetwork(neuralNetwork, testedT
 // ]
 // familliarTracks: [
 //     {
-//         trackId
+//         id (of track)
 //         AudioFeatures: {
 //             ...
 //         }
@@ -171,7 +171,7 @@ async function classifyForRecommendedTracks_neuralnetwork(neuralNetwork, testedT
 // ]
 // testedTracks: [
 //     {
-//         trackId
+//         id (of track)
 //         AudioFeatures: {
 //             ...
 //         }
@@ -182,7 +182,7 @@ async function classifyForRecommendedTracks_neuralnetwork(neuralNetwork, testedT
 // =====   out:   =====
 // [
 //     {
-//         trackId
+//         id (of track)
 //         ...
 //     }
 // ]
@@ -197,7 +197,7 @@ async function classifyForRecommendedTracks_all(neuralNetwork, familliarTracks, 
 
     results.forEach((arrOfRecommendedTracks) => {
         arrOfRecommendedTracks.forEach((r) => {
-            let track = testedTracks.find((t) => t.trackId === r.trackId)
+            let track = testedTracks.find((t) => t.id === r.id)
             if(track.recommendationsCounter === undefined) {
                 track.recommendationsCounter = 0;
             }
@@ -211,7 +211,7 @@ async function classifyForRecommendedTracks_all(neuralNetwork, familliarTracks, 
 
 // =====   in:   =====
 // baseTrack: {
-//     trackId
+//     id (of track)
 //     AudioFeatures: {
 //         ...
 //     }
@@ -219,7 +219,7 @@ async function classifyForRecommendedTracks_all(neuralNetwork, familliarTracks, 
 // }
 // testedTracks: [
 //     {
-//         trackId
+//         id (of track)
 //         AudioFeatures: {
 //             ...
 //         }
@@ -230,7 +230,7 @@ async function classifyForRecommendedTracks_all(neuralNetwork, familliarTracks, 
 // =====   out:   =====
 // [
 //     {
-//         trackId
+//         id (of track)
 //         ...
 //     }
 // ]
