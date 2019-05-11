@@ -47,7 +47,7 @@ async function classifyForRecommendedTracks_knn(familliarTracks, testedTracks) {
     });
 
     let recommendations = [];
-    testedTracks.forEach((t, i) => {
+    testedTracks.forEach(async (t, i) => {
         let isRecommended = await RecommendationsMachine_knn.run({
             'y': testedTracksFeatures[i],
 		    'X': familliarTracksFeatures
@@ -99,7 +99,7 @@ async function classifyForRecommendedTracks_id3(familliarTracks, testedTracks) {
     });
 
     let recommendations = [];
-    testedTracks.forEach((t, i) => {
+    testedTracks.forEach(async (t, i) => {
         let isRecommended = await RecommendationsMachine_id3.run({
             'y': testedTracksFeatures[i],
 		    'X': familliarTracksFeatures
@@ -143,7 +143,7 @@ async function classifyForRecommendedTracks_neuralnetwork(neuralNetwork, testedT
     });
 
     let recommendations = [];
-    testedTracks.forEach((t, i) => {
+    testedTracks.forEach(async (t, i) => {
         let isRecommended = await RecommendationsMachine_nn.run({
             't': testedTracksFeatures[i],
 		    'nn': neuralNetwork
@@ -237,7 +237,7 @@ async function classifyForRecommendedTracks_all(neuralNetwork, familliarTracks, 
 //
 // similarTracks returned as track objects
 // as they are presented as the testedTracks array
-function SearchForSimilarTracks_knn(baseTrack, testedTracks) {
+async function SearchForSimilarTracks_knn(baseTrack, testedTracks) {
     let baseTrackFeatures = ReformatAudioFeatures(baseTrack);
     let testedTracksFeatures = testedTracks.map((t) => {
         return ReformatAudioFeatures(t);
