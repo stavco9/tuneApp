@@ -360,7 +360,7 @@ async function GetSimilarTracksById(req, res) {
 			let unfamilliarTracks = await usersController.GetUnfamilliarPopularTracksByUserId(userId, 1000);
 			let allTestedTracks = [...preferredTracks, ...unfamilliarTracks];
 		
-			res.status(200).send(SimilarTracks.search(baseTrack[0], allTestedTracks));
+			res.status(200).send(await SimilarTracks.search(baseTrack[0], allTestedTracks));
 		}
 	}
 }

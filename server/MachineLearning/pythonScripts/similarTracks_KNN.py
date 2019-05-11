@@ -9,5 +9,5 @@ while True:
     y = np.array(j['y'])
     nbrs = NearestNeighbors(n_neighbors=4, algorithm='ball_tree').fit(X)
     result = nbrs.kneighbors([y],return_distance=False)
-    print((''.join(str(e) for e in result)).replace(' ',','))
+    print((','.join((''.join(str(e) for e in result)).split())).replace('[,','['))
     sys.stdout.flush()

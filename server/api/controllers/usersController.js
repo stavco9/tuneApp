@@ -42,7 +42,7 @@ async function GetFamilliarTracksByUserId(userId, numOfActivities=300) {
         unlikes = userInfo.unlikedTracks;
     }
 
-    let scale = 0;
+    let scale = 1;
     lastActivities.forEach((act) => {
         scale += 0.01;
         if(preferredTracks[act.trackId] === undefined) {
@@ -73,7 +73,7 @@ async function GetFamilliarTracksByUserId(userId, numOfActivities=300) {
     });
 
     Object.keys(preferredTracks).forEach((k) => {
-        trackObjects.find((o) => o.trackId == k).scoreForUser = preferredTracks[k].score;
+        trackObjects.find((o) => o.id == k).scoreForUser = preferredTracks[k];
     });
     trackObjects.sort(function(a, b) {
         return b.scoreForUser - a.scoreForUser;
@@ -110,8 +110,8 @@ async function GetPreferredTracksByUserId(userId, numOfActivities=300) {
 //     }
 // ]
 async function GetUnfamilliarPopularTracksByUserId(userId, numOfActivities=1000) {
-    let familliar = await GetFamilliarTracksByUserId(userId, numOfActivities)
-    let popular = await mongoConnection.queryFromMongoDBSortedMax('Tracks', {}, {'popularity': -1}, familliar.length + 200);
+    let familliar = await GetFamilliarTracksByUserId(userId, numOfActivities);
+    let popular = await mongoConnection.queryFromMongoDBJoinSort('Tracks', 'AudioFeatures', 'id', 'id', {}, familliar.length + 200, {'popularity': -1});
     
     return popular.filter((p) => !familliar.some((f) => p.id == f.id));
 }
@@ -128,10 +128,15 @@ async function getMyDetails(req, res){
     }
 }
 
+async function GetPreferencesNN(userId) {
+    return ((await GetUserInfo(userId)).neuralnetwork);
+}
+
 module.exports = {
     getMyDetails: getMyDetails,
     GetFamilliarTracksByUserId: GetFamilliarTracksByUserId,
     GetUnfamilliarPopularTracksByUserId: GetUnfamilliarPopularTracksByUserId,
     GetPreferredTracksByUserId: GetPreferredTracksByUserId,
-    GetUserIdFromReq: GetUserIdFromReq
+    GetUserIdFromReq: GetUserIdFromReq,
+    GetPreferencesNN: GetPreferencesNN
 };

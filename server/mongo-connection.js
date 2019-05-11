@@ -85,6 +85,47 @@ async function queryFromMongoDBJoin(firstCollectionName, secondCollectionName, f
     }
 }
 
+async function queryFromMongoDBJoinSort(firstCollectionName, secondCollectionName, firstCollectionField, secondCollectionField, matchField, limit, sortField, callback){
+
+    try{
+        const db = await MongoClient.connect(url);
+
+        var dbo = db.db(process.env.MONGO_DATABASE);
+
+        limit = limit != undefined ? limit : 1000;
+
+        const result = await dbo.collection(firstCollectionName).aggregate([
+        {   
+            $match: matchField
+        },
+        {
+            $limit: limit
+        },
+        {
+            $sort: sortField
+        },
+        {
+            $lookup:
+            {
+                from: secondCollectionName,
+                localField: secondCollectionField,
+                foreignField: firstCollectionField,
+                as: secondCollectionName
+            }
+        },
+        {
+            $unwind: ("$" + secondCollectionName)
+        }]).toArray();
+
+        db.close();
+
+        return result;
+    }
+    catch(err){
+        throw err;
+    }
+}
+
 async function addToMongoDB(collectionName, jsonData){
 
     try{
@@ -139,5 +180,6 @@ module.exports = {
     updateMongoDB: updateMongoDB,
     deleteFromMongoDB: deleteFromMongoDB,
     queryFromMongoDBSortedMax: queryFromMongoDBSortedMax,
-    queryFromMongoDBJoin: queryFromMongoDBJoin
+    queryFromMongoDBJoin: queryFromMongoDBJoin,
+    queryFromMongoDBJoinSort: queryFromMongoDBJoinSort
 };
