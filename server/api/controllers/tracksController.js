@@ -1,5 +1,4 @@
 //'use strict';
-const {PyMachine} = require('../../MachineLearning/PyMachine/pymachine');
 var spotifyAuthentication = require('../../spotify-authentication');
 const mongoConnection = require('../../mongo-connection');
 var asyncPolling = require('async-polling');
@@ -7,6 +6,7 @@ const request = require('request'); // "Request" library
 const reqPromise = require('request-promise');
 const usersController = require('./usersController');
 const searchKeys = [ 'a', 'e', 'i', 'o', 'u', 'er', 'ar', 'or', 'de', 'do' ];
+const { SimilarTracks } = require('../../MachineLearning/ml');
 
 const spotifyBaseUrl = "https://api.spotify.com/v1/";
 
@@ -334,54 +334,22 @@ function UnlikeTrackById(req, res) {
 	});
 }
 
-
-function ConvertAudioFeaturesJsonToArray(json) {
-    let features = [];
-    features.push(json.danceability);
-    features.push(json.energy);
-    features.push(json.key);
-    features.push(json.loudness);
-    features.push(json.mode);
-    features.push(json.speechiness);
-    features.push(json.acousticness);
-    features.push(json.instrumentalness);
-    features.push(json.liveness);
-    features.push(json.valence);
-    features.push(json.tempo);
-    features.push(json.time_signature);
-
-    return features;
-}
-
 // MACHINE LEARNING !!!
 // LIOR CURRENTLY WORKING ON IT @@@@@@@@@@@@@@@@@@@@@@@@
 // DO NOT CHANGE IT @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+// in: trackId
+// out: [ { trackId, trackName, artistName } ]
 async function GetSimilarTracksById(req, res) {
 	let trackId = req.params.trackId;
-	//let userId = usersController.GetUserIdFromReq(req);
-	//let test = (await mongoConnection.queryFromMongoDBSortedMax('AudioFeatures', {}, {likes: -1}, 500));
-    let trackFeatures = ConvertAudioFeaturesJsonToArray((await mongoConnection.queryFromMongoDB('AudioFeatures', {'id': trackId}))[0]);
-    let allTracksFeatures = (await mongoConnection.queryFromMongoDBSortedMax('AudioFeatures', {}, {likes: -1}, 200)).map((j) => {
-        return ConvertAudioFeaturesJsonToArray(j);
-    });
+	let userId = usersController.GetUserIdFromReq(req);
 
-	
+    let baseTrack = {}; // get track, including audio features, from mongo.....
 	let preferredTracks = usersController.GetPreferredTracksByUserId(userId, 1000);
-	let unfamilliarTracks = usersController.GetUnfamilliarTracksByUserId(userId);
+	let unfamilliarTracks = usersController.GetUnfamilliarPopularTracksByUserId(userId, 1000);
+	let allTestedTracks = [...preferredTracks, ...unfamilliarTracks];
 
-	let allTrackIds = [...new Set([...preferredTracks, ...unfamilliarTracks].map(t => t.trackId))];
-	
-
-    /*let allTracksFeatures = allTrackIds.map((t) => {
-        mongoConnection.queryFromMongoDB('AudioFeatures', {'id': t.trackId})
-	});*/
-	
-	let similar = await similarTracksMachine.run({
-		'y': trackFeatures,
-		'X': allTracksFeatures
-	});
-
-	res.status(200).send(similar);
+	res.status(200).send(SimilarTracks.search(baseTrack, allTestedTracks));
 }
 
 // tracks/top/trackId

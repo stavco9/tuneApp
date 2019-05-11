@@ -5,15 +5,30 @@ function GetUserIdFromReq(req) {
 }
 
 // Get the last listening of the user, sorted from the newest to oldest
+// each returned object should look like that:
+// {
+//     trackId
+//     score
+// }
 async function GetLastActivitiesByUserId(userId, numOfActivities=300) {
     return (await mongoConnection.queryFromMongoDBSortedMax('ListeningAndSuggestions', {'email': userId}, {'_id': -1}, numOfActivities));
 }
 
 async function GetUserInfo(userId){
     return (await mongoConnection.queryFromMongoDB('users', {'email': userId}))[0];
- }
+}
 
-async function GetPreferredTracksByUserId(userId, numOfActivities=300) {
+// returns
+// [
+//     {
+//          trackId
+//          name
+//          AudioFeatures
+//          ...
+//          score
+//      }
+// ]
+async function GetFamilliarTracksByUserId(userId, numOfActivities=300) {
     let preferredTracks = {};
     let lastActivities = (await GetLastActivitiesByUserId(userId, numOfActivities)).reverse();
     let likes = [];
@@ -51,13 +66,49 @@ async function GetPreferredTracksByUserId(userId, numOfActivities=300) {
     });
     
     return (Object.keys(preferredTracks)
-        .filter(t => preferredTracks[t] > 0)
         .sort(function(a, b) {
             return preferredTracks[b] - preferredTracks[a];
+        })
+        // LIOR: HERE, MAKE A QUERY AND RETURN FULL TRACK OBJECT.
+        // THEN ADD A SCORE PROPERTY TO THE RETURNED TRACK OBJECT
+        .map((t) => {
+            return {
+                trackId: t,
+                score: preferredTracks[b]
+            }
         }));
 }
 
-function GetUnfamilliarTracksByUserId(userId) {
+// =====   out:   =====
+// [
+//     {
+//         trackId
+//         name
+//         AudioFeatures: {
+//             ...
+//         }
+//         ...
+//     }
+// ]
+async function GetPreferredTracksByUserId(userId, numOfActivities=300) {
+    return (GetFamilliarTracksByUserId(userId, numOfActivities)
+        .filter(t => t.score > 0));
+}
+
+// =====   out:   =====
+// [
+//     {
+//         trackId
+//         name
+//         AudioFeatures: {
+//             ...
+//         }
+//         ...
+//     }
+// ]
+function GetUnfamilliarPopularTracksByUserId(userId, amout = 100) {
+    // Get the most popular unfamilliar songs,
+    // And the newest unfamilliar songs.
     return []; // CHANGE THAT LATER
 }
 
@@ -75,7 +126,8 @@ async function getMyDetails(req, res){
 
 module.exports = {
     getMyDetails: getMyDetails,
-    GetUnfamilliarTracksByUserId: GetUnfamilliarTracksByUserId,
+    GetFamilliarTracksByUserId: GetFamilliarTracksByUserId,
+    GetUnfamilliarPopularTracksByUserId: GetUnfamilliarPopularTracksByUserId,
     GetPreferredTracksByUserId: GetPreferredTracksByUserId,
     GetUserIdFromReq: GetUserIdFromReq
 };

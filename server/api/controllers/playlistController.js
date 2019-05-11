@@ -1,13 +1,12 @@
 //'use strict';
-
 var spotifyAuthentication = require('../../spotify-authentication');
 const mongoConnection = require('../../mongo-connection');
 var usersController  = require('./usersController');
 var asyncPolling = require('async-polling');
 const request = require('request'); // "Request" library
 const reqPromise = require('request-promise');
-var {PythonShell} = require('python-shell');
 var moment = require('moment');
+const { Recommendations } = require('../../MachineLearning/ml');
 
 function getDate(){
 		
@@ -40,8 +39,13 @@ async function buildPlaylist(req, res){
 
 		userId = "talfin84@gmail.com";
 
-		var preferredTracks = await usersController.GetPreferredTracksByUserId(userId);
+		let [familliarTracks, unfamilliarTracks, userPreferencesNN] = await Promise.all([
+			usersController.GetFamilliarTracksByUserId(userId),
+			usersController.GetUnfamilliarPopularTracksByUserId(userId),
+			usersController.GetPreferencesNN(userId)
+		]);
 
+		return Recommendations.classifyMultiple(userPreferencesNN, familliarTracks, unfamilliarTracks);
 	//}
 }
 
