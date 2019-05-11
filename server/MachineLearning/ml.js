@@ -1,9 +1,9 @@
 const {PyMachine} = require('./PyMachine/pymachine');
 
-let RecommendationsMachine_knn = new PyMachine(__dirname + '/../../MachineLearning/pythonScripts/Recommendations_KNN.py');
-let RecommendationsMachine_id3 = new PyMachine(__dirname + '/../../MachineLearning/pythonScripts/Recommendations_ID3.py');
-let RecommendationsMachine_nn = new PyMachine(__dirname + '/../../MachineLearning/pythonScripts/Recommendations_NN.py');
-let similarTracksMachine_knn = new PyMachine(__dirname + '/../../MachineLearning/pythonScripts/SimilarTracks_KNN');
+//let RecommendationsMachine_knn = new PyMachine(__dirname + '/../../MachineLearning/pythonScripts/Recommendations_KNN.py');
+//let RecommendationsMachine_id3 = new PyMachine(__dirname + '/../../MachineLearning/pythonScripts/Recommendations_ID3.py');
+//let RecommendationsMachine_nn = new PyMachine(__dirname + '/../../MachineLearning/pythonScripts/Recommendations_NN.py');
+let similarTracksMachine_knn = new PyMachine(__dirname + '/../MachineLearning/pythonScripts/similarTracks_KNN.py');
 
 // Function names are as follows:
 // [Function goal and returned value type]_[Algorithm used]
