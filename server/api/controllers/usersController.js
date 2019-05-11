@@ -66,7 +66,7 @@ async function GetFamilliarTracksByUserId(userId, numOfActivities=300) {
     });
     
 
-    let trackObjects = mongoConnection.queryFromMongoDBJoin('Tracks', 'AudioFeatures', 'id', 'id',
+    let trackObjects = await mongoConnection.queryFromMongoDBJoin('Tracks', 'AudioFeatures', 'id', 'id',
         {'id': {
             $in: Object.keys(preferredTracks)
         }
@@ -94,7 +94,7 @@ async function GetFamilliarTracksByUserId(userId, numOfActivities=300) {
 //     }
 // ]
 async function GetPreferredTracksByUserId(userId, numOfActivities=300) {
-    return (GetFamilliarTracksByUserId(userId, numOfActivities)
+    return ((await GetFamilliarTracksByUserId(userId, numOfActivities))
         .filter(t => t.scoreForUser > 0));
 }
 
