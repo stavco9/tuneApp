@@ -10,7 +10,7 @@ const { SimilarTracks } = require('../../MachineLearning/ml');
 
 const spotifyBaseUrl = "https://api.spotify.com/v1/";
 
-let similarTracksMachine = new PyMachine(__dirname + '/../../MachineLearning/pythonScripts/similarTracks_KNN.py');
+//let similarTracksMachine = new PyMachine(__dirname + '/../../MachineLearning/pythonScripts/similarTracks_KNN.py');
 
 var polling = asyncPolling(function(req, res){
 
