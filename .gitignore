@@ -71,3 +71,7 @@ package-lock.json
 /ReactCommon/**/*.xcodeproj
 RNTester/build
 /.idea/
+
+
+# ENV file
+*.env
