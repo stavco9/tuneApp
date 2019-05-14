@@ -1,11 +1,20 @@
-import React, {Component} from 'react';
-import {View, Image, TouchableNativeFeedback, Text} from 'react-native';
-import {Actions} from "react-native-router-flux";
+import React, {Fragment} from 'react';
 import styled from 'styled-components';
+import {connect} from 'react-redux'
+import {Image, Text, TouchableNativeFeedback, View} from 'react-native';
+import {GoogleSignin} from 'react-native-google-signin';
+import {Login} from "../../redux/actions/login-actions";
+import {Redirect} from 'react-router-native';
+
+GoogleSignin.configure({
+    webClientId: "331158363292-hd64i4i48r4oaij2op4l5nahpf6u0rfo.apps.googleusercontent.com",
+    offlineAccess: true
+});
+
 
 const StyledLoginPage = styled(View)`
     display: flex;
-    justify-content: space-around;
+    justify-content: space-evenly;
     align-items: center;
     flex-flow: column;
     width: 100%;
@@ -22,36 +31,67 @@ const StyledLoginButtonView = styled(View)`
 `;
 
 const StyledAppHeader = styled(Text)`
-    font-size: 20px;
+    width: 100%;
+    font-size: 26px;
     color: white;
+    text-align: center;
     font-family: "Roboto-Thin";
+    text-align: center;
 `;
 
-class LoginPage extends Component<Props> {
-    constructor(props) {
-        super(props);
-    }
+const LoginPage = props => {
+    const signIn = async () => {
+        try {
+            await GoogleSignin.hasPlayServices();
+            const {user} = await GoogleSignin.signIn();
+            if (user) {
+                props.login(user);
+                console.log(user);
+            }
+        } catch (error) {
+        }
+    };
+    return (
+        <Fragment>
+            {props.user.email ? <Redirect to="/home/topSongs"/> :
+                (
+                    < StyledLoginPage>
+                        < StyledAppHeader> Welcome to TuneApp!!!</StyledAppHeader>
+                        <StyledLoginButtonView>
+                            <TouchableNativeFeedback onPress={signIn}
+                                                     background={TouchableNativeFeedback.Ripple('ThemeAttrAndroid', true)}>
+                                <View>
+                                    <Image style={{width: 50, height: 50}}
+                                           source={require('../../assets/sign-in-with-google.png')}/>
+                                </View>
+                            </TouchableNativeFeedback>
+                            <TouchableNativeFeedback onPress={signIn}
+                                                     background={TouchableNativeFeedback.Ripple('ThemeAttrAndroid', true)}>
+                                <Image style={{width: 50, height: 50}}
+                                       source={require('../../assets/sign-in-with-spotify.png')}/>
+                            </TouchableNativeFeedback>
+                        </StyledLoginButtonView>
+                    </StyledLoginPage>
+                )
+            }
+        </Fragment>
+    )
+        ;
+};
 
-    render() {
-        return (
-            <StyledLoginPage>
-                <StyledAppHeader>Welcome to TuneApp</StyledAppHeader>
-                <StyledLoginButtonView>
-                    <TouchableNativeFeedback onPress={() => Actions.top()}
-                                             background={TouchableNativeFeedback.Ripple('ThemeAttrAndroid', true)}>
-                        <View>
-                            <Image style={{width: 50, height: 50}}
-                                   source={require('../../assets/sign-in-with-google.png')}/>
-                        </View>
-                    </TouchableNativeFeedback>
-                    <TouchableNativeFeedback background={TouchableNativeFeedback.Ripple('ThemeAttrAndroid', true)}>
-                        <Image style={{width: 50, height: 50}}
-                               source={require('../../assets/sign-in-with-spotify.png')}/>
-                    </TouchableNativeFeedback>
-                </StyledLoginButtonView>
-            </StyledLoginPage>
-        );
+const mapStateToProps = state => {
+    return {
+        user: state.login
     }
-}
+};
 
-export default LoginPage
+const mapDispatchToProps = dispatch => {
+    return {
+        login: user => {
+            dispatch(Login(user));
+        },
+    }
+};
+
+
+export default connect(mapStateToProps, mapDispatchToProps)(LoginPage);
