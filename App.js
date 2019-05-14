@@ -3,22 +3,19 @@ import {Provider} from 'react-redux'
 import store from "./redux/store";
 import LoginPage from "./Components/LoginPage/LoginPage";
 import Shell from "./Components/Shell/Shell";
-import {Router, Scene, Stack} from "react-native-router-flux";
-
-
-const Props = {};
+import {NativeRouter, Route, BackButton} from "react-router-native";
 
 export default class App extends Component<Props> {
     render() {
         return (
-            <Router>
-                <Provider store={store}>
-                    <Stack key="root" hideNavBar={true}>
-                        <Scene key="/" component={LoginPage}/>
-                        <Scene key="top" component={Shell}/>
-                    </Stack>
-                </Provider>
-            </Router>
+            <NativeRouter>
+                <BackButton>
+                    <Provider store={store}>
+                        <Route exact path="/" component={LoginPage}/>
+                        <Route path="/home" component={Shell}/>
+                    </Provider>
+                </BackButton>
+            </NativeRouter>
         );
     }
 }
