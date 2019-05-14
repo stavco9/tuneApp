@@ -350,18 +350,20 @@ async function GetSimilarTracksById(req, res) {
 		res.status(404).send("Track " + trackId + " was not found");
 	}
 	else{
-		if (req.session.token == null){
-			res.status(401).send('You are unauthorized! Please login!');
-		}
-		else{
-			let  userId = req.session.token.email;
+			let userId = "null";
+			//if (req.session.token == null){
+			//	res.status(401).send('You are unauthorized! Please login!');
+			//}
+			//else{
+			if (req.session.token != null){
+				userId = req.session.token.email;
+			}
 
 			let preferredTracks = await usersController.GetPreferredTracksByUserId(userId, 1000);
 			let unfamilliarTracks = await usersController.GetUnfamilliarPopularTracksByUserId(userId, 1000);
 			let allTestedTracks = [...preferredTracks, ...unfamilliarTracks];
 		
 			res.status(200).send(await SimilarTracks.search(baseTrack[0], allTestedTracks));
-		}
 	}
 }
 

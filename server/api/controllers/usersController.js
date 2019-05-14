@@ -11,7 +11,7 @@ function GetUserIdFromReq(req) {
 //     score
 // }
 async function GetLastActivitiesByUserId(userId, numOfActivities=300) {
-    return (await mongoConnection.queryFromMongoDBSortedMax('ListeningAndSuggestions', {'email': userId}, {'_id': -1}, numOfActivities));
+    return (await mongoConnection.queryFromMongoDBSortedMax('ListeningAndSuggestions', {}, {'_id': -1}, numOfActivities));
 }
 
 async function GetUserInfo(userId){
@@ -33,13 +33,16 @@ async function GetFamilliarTracksByUserId(userId, numOfActivities=300) {
     let lastActivities = (await GetLastActivitiesByUserId(userId, numOfActivities)).reverse();
     let likes = [];
     let unlikes = [];
-    let userInfo = await GetUserInfo(userId);
 
-    if (userInfo.hasOwnProperty('likedTracks')){
-        likes = userInfo.likedTracks;
-    }
-    if (userInfo.hasOwnProperty('unlikedTracks')){
-        unlikes = userInfo.unlikedTracks;
+    if (userId != "null"){
+        let userInfo = await GetUserInfo(userId);
+
+        if (userInfo.hasOwnProperty('likedTracks')){
+            likes = userInfo.likedTracks;
+        }
+        if (userInfo.hasOwnProperty('unlikedTracks')){
+            unlikes = userInfo.unlikedTracks;
+        }
     }
 
     let scale = 1;
