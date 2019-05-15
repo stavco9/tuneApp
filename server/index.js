@@ -167,7 +167,7 @@ app.get('/logout', (req, res) => {
     res.redirect('/');
 });
 
-app.get('/remove-account', async (req, res) => {
+app.delete('/remove-account', async (req, res) => {
 
     if (!req.session.token){
         return res.redirect('/login');

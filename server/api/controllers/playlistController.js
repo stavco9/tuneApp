@@ -22,7 +22,7 @@ function getDate(){
 
 	var seconds = today.getSeconds();
 
-	var date = today.getFullYear()+'-' + (month < 10 ? '0' + month: month)  + '-' + (day < 10 ? '0' + day: day);
+	var date = today.getFullYear() + '-' + (month < 10 ? '0' + month: month) + '-' + (day < 10 ? '0' + day: day);
 
 	var time = (hours < 10 ? '0' + hours: hours) + '-' + (minutes < 10 ? '0' + minutes: minutes) + '-' + (seconds < 10 ? '0' + seconds: seconds);
 

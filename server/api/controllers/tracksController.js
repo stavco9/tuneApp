@@ -167,20 +167,18 @@ function AddNewTrack(req, res) {
 }
 
 // Gets a single artist by ID, exposed at GET /artists/artistID
-function GetTrackById(req, res) {
+async function GetTrackById(req, res) {
 	if (req.params.trackId === 'top') {
-		GetTopTracks(req, res);
+		await GetTopTracks(req, res);
 	}
 	else {
-		var trackResult = mongoConnection.queryFromMongoDBJoin('Tracks', 'AudioFeatures', 'id', 'id', {'id': req.params.trackId});
+		var trackResult = await mongoConnection.queryFromMongoDBJoin('Tracks', 'AudioFeatures', 'id', 'id', {'id': req.params.trackId});
 
-		trackResult.then(function (result) {
-			if (result.length < 1) {
-				res.status(404).send('The track with the ID ' + req.params.trackId + " was not found!");
-			} else {
-				res.json(result);
-			}
-		});
+		if (trackResult.length < 1) {
+			res.status(404).send('The track with the ID ' + req.params.trackId + " was not found!");
+		} else {
+			res.json(trackResult);
+		}
 	}
 
 }
@@ -224,28 +222,34 @@ function LikeTrackById(req, res) {
 				}
 
 				var likedTracks = user[0].likedTracks;
+					
 				if (likedTracks === undefined) {
 					likedTracks = [];
 				}
 
+				if (req.body.hasOwnProperty('absolutely') && req.body.absolutely != "false" && req.body.absolutely != "0"){
+
+					var length = likedTracks.length;
+					likedTracks.push(req.body.trackId);
+					likedTracks = arrayUnique(likedTracks);
+
+					// Add the track to the liked tracks
+					if (length !== likedTracks.length) {
+						if (result[0].likes === undefined) { result[0].likes = 0; }
+
+						result[0].likes++;
+						await mongoConnection.updateMongoDB('Tracks', {'id': req.body.trackId}, {likes: result[0].likes});
+
+						await mongoConnection.updateMongoDB('AudioFeatures', {'id': req.body.trackId}, {likes: result[0].likes});
+					}
+				}
+
 				var unlikedTracks = user[0].unlikedTracks;
+
 				if (unlikedTracks === undefined) {
 					unlikedTracks = [];
 				}
-
-				var length = likedTracks.length;
-				likedTracks.push(req.body.trackId);
-				likedTracks = arrayUnique(likedTracks);
 				
-				// Add the track to the liked tracks
-				if (length !== likedTracks.length) {
-					if (result[0].likes === undefined) { result[0].likes = 0; }
-
-					result[0].likes++;
-					await mongoConnection.updateMongoDB('Tracks', {'id': req.body.trackId}, {likes: result[0].likes});
-
-					await mongoConnection.updateMongoDB('AudioFeatures', {'id': req.body.trackId}, {likes: result[0].likes});
-				}
 
 				// Remove the liked track from the unlike tracksp if exists
 				var index = unlikedTracks.indexOf(req.body.trackId);
@@ -295,23 +299,26 @@ function UnlikeTrackById(req, res) {
 					unlikedTracks = [];
 				}
 
+				if (req.body.hasOwnProperty('absolutely') && req.body.absolutely != "false" && req.body.absolutely != "0"){
+
+					var length = unlikedTracks.length;
+					unlikedTracks.push(req.body.trackId);
+					unlikedTracks = arrayUnique(unlikedTracks);
+	
+					// Add the track to the unliked tracks
+					if (length !== unlikedTracks.length) {
+						if (result[0].unlikes === undefined) { result[0].unlikes = 0; }
+	
+						result[0].unlikes++;
+						await mongoConnection.updateMongoDB('Tracks', {'id': req.body.trackId}, {unlikes: result[0].unlikes});
+	
+						await mongoConnection.updateMongoDB('AudioFeatures', {'id': req.body.trackId}, {unlikes: result[0].unlikes});
+					}
+				}
+
 				var likedTracks = user[0].likedTracks;
 				if (likedTracks === undefined) {
 					likedTracks = [];
-				}
-
-				var length = unlikedTracks.length;
-				unlikedTracks.push(req.body.trackId);
-				unlikedTracks = arrayUnique(unlikedTracks);
-
-				// Add the track to the unliked tracks
-				if (length !== unlikedTracks.length) {
-					if (result[0].unlikes === undefined) { result[0].unlikes = 0; }
-
-					result[0].unlikes++;
-					await mongoConnection.updateMongoDB('Tracks', {'id': req.body.trackId}, {unlikes: result[0].unlikes});
-
-					await mongoConnection.updateMongoDB('AudioFeatures', {'id': req.body.trackId}, {unlikes: result[0].unlikes});
 				}
 
 				// Remove the unliked track from the likes list if exists
@@ -373,10 +380,24 @@ async function GetTopTracks(req, res) {
 	if (req.params.limit !== undefined) {
 		limit = parseInt(req.params.limit);
 	}
-	var trackResult = mongoConnection.queryFromMongoDBSortedMax('Tracks', {}, {likes: -1}, limit);
-	trackResult.then(function (result) {
-		res.json(result);
+	var trackResult = await mongoConnection.queryFromMongoDBSortedMax('Tracks', {}, {popularity: -1}, limit);
+	
+	trackResult = trackResult.sort(function (a, b){
+		if (a.likes === undefined) {
+			return 1;
+		}
+		else if (b.likes === undefined) {
+			return -1;
+		}
+		else if (a.likes === b.likes) {
+			return 0;
+		}
+		else{
+			return a.likes < b.likes ? 1 : -1;
+		}
 	});
+
+	res.json(trackResult);
 }
 
 module.exports = {

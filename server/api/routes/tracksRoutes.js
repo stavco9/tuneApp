@@ -39,11 +39,15 @@ module.exports = function(app) {
   });
   //.post(tracksController.AddNewAudioFeature);
 
+  app.route('/tracks/top/:limit').get(async function(req, res){
+    await tracksController.GetTopTracks(req, res);
+  });
+
   app.route('/tracks/:trackId')
     .get(tracksController.GetTrackById)
     .put(tracksController.UpdateTrackById)
     .delete(tracksController.DeleteTrackById);
-
+    
   // Body format for POST request
   //{
   //  "trackId": "dsgkkld"

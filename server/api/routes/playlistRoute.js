@@ -27,7 +27,7 @@ module.exports = function(app) {
 
   // artistsController Routes
   app.route('/playlist/build')
-    .post(playlistController.buildPlaylist);
+    .get(playlistController.buildPlaylist);
 
   // Body format for POST request
   //{
