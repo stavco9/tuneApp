@@ -207,15 +207,15 @@ function LikeTrackById(req, res) {
 			res.status(404).send('The track with the ID ' + req.body.trackId + " was not found!");
 		}
 		else {
-			//if (req.session.token == null){
-			//	res.status(401).send('You are unauthorized! Please login!');
-			//}
-			//else{
-				//var email = req.session.token.email;
+			if (req.session.token == null){
+				res.status(401).send('You are unauthorized! Please login!');
+			}
+			else{
+				var email = req.session.token.email;
 
 				// REPLACE THE EMAIL WITH req.session.token.email IT SHOULD WORK IF YOU'RE USING A REAL WEB APP!
-				var user = await mongoConnection.queryFromMongoDB('users', {'email': 'stavco9@gmail.com'});
-				//var user = await mongoConnection.queryFromMongoDB('users', {'email': email});
+				//var user = await mongoConnection.queryFromMongoDB('users', {'email': 'stavco9@gmail.com'});
+				var user = await mongoConnection.queryFromMongoDB('users', {'email': email});
 
 				if (user.length < 1) {
 					res.status(401).send('You are unauthorized! Please login!');
@@ -264,10 +264,10 @@ function LikeTrackById(req, res) {
 
 				// REPLACE THE EMAIL WITH req.session.token.email IT SHOULD WORK IF YOU'RE USING A REAL WEB APP!
 				//await mongoConnection.updateMongoDB('users', {'email': email}, {likedTracks: likedTracks});
-				await mongoConnection.updateMongoDB('users', {'email': "stavco9@gmail.com"}, {likedTracks: likedTracks, unlikedTracks: unlikedTracks});
+				await mongoConnection.updateMongoDB('users', {'email': email}, {likedTracks: likedTracks, unlikedTracks: unlikedTracks});
 
 				res.status(200).send('Liked track ' + req.body.trackId);
-			//}
+			}
 		}
 	});
 }
@@ -280,15 +280,15 @@ function UnlikeTrackById(req, res) {
 			res.status(404).send('The track with the ID ' + req.body.trackId + " was not found!");
 		}
 		else {
-			//if (req.session.token == null){
-			//	res.status(401).send('You are unauthorized! Please login!');
-			//}
-			//else{
-				//var email = req.session.token.email;
+			if (req.session.token == null){
+				res.status(401).send('You are unauthorized! Please login!');
+			}
+			else{
+				var email = req.session.token.email;
 
 				// REPLACE THE EMAIL WITH req.session.token.email IT SHOULD WORK IF YOU'RE USING A REAL WEB APP!
-				var user = await mongoConnection.queryFromMongoDB('users', {'email': 'stavco9@gmail.com'});
-				//var user = await mongoConnection.queryFromMongoDB('users', {'email': email});
+				//var user = await mongoConnection.queryFromMongoDB('users', {'email': 'stavco9@gmail.com'});
+				var user = await mongoConnection.queryFromMongoDB('users', {'email': email});
 
 				if (user.length < 1) {
 					res.status(401).send('You are unauthorized! Please login!');
@@ -333,11 +333,11 @@ function UnlikeTrackById(req, res) {
 				}
 				
 				// REPLACE THE EMAIL WITH req.session.token.email IT SHOULD WORK IF YOU'RE USING A REAL WEB APP!
-				await mongoConnection.updateMongoDB('users', {'email': 'stavco9@gmail.com'}, {likedTracks: likedTracks, unlikedTracks: unlikedTracks});
+				await mongoConnection.updateMongoDB('users', {'email': email}, {likedTracks: likedTracks, unlikedTracks: unlikedTracks});
 				//await mongoConnection.updateMongoDB('users', {'email': email}, {likedTracks: likedTracks});
 
 				res.status(200).send('Unliked track ' + req.body.trackId);
-			//}
+			}
 		}
 	});
 }

@@ -32,12 +32,12 @@ function getDate(){
 async function buildPlaylist(req, res){
 
 	// In production, unmark all the comments of user details
-	//if (!req.session.token){
-	//	res.status(401).send('Unauthorized !! Please login');
-	//}
-	//else{
+	if (!req.session.token){
+		res.status(401).send('Unauthorized !! Please login');
+	}
+	else{
 
-		userId = "stavco9@gmail.com";
+		userId = res.session.token.email;
 
 		let [familliarTracks, unfamilliarTracks, userPreferencesNN] = await Promise.all([
 			usersController.GetFamilliarTracksByUserId(userId),
@@ -46,16 +46,16 @@ async function buildPlaylist(req, res){
 		]);
 
 		return Recommendations.classifyMultiple(userPreferencesNN, familliarTracks, unfamilliarTracks);
-	//}
+	}
 }
 
 async function listenPlaylist(req, res){
 	
 	// In production, unmark all the comments of user details
-	//if (!req.session.token){
-	//	res.status(401).send('Unauthorized !! Please login');
-	//}
-	//else{
+	if (!req.session.token){
+		res.status(401).send('Unauthorized !! Please login');
+	}
+	else{
 
 		var currentTime = getDate();
 
@@ -81,7 +81,7 @@ async function listenPlaylist(req, res){
 
 			var listeningData = {
 				trackId: req.body.trackId,
-				email: "stavco9@gmail.com",
+				email: req.session.token.email,
 				//email: req.session.token.email,
 				dateTime: currentTime,
 				duration: durationOfListening,
@@ -102,7 +102,7 @@ async function listenPlaylist(req, res){
 	
 			res.status(200).send("success");
 		}
-	//}
+	}
 }
 
 var arrayUnique = function (arr) {
