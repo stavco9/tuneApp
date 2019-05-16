@@ -5,6 +5,7 @@ import {Image, Text, TouchableNativeFeedback, View} from 'react-native';
 import {GoogleSignin} from 'react-native-google-signin';
 import {Login} from "../../redux/actions/login-actions";
 import {Redirect} from 'react-router-native';
+import axios from 'axios';
 
 GoogleSignin.configure({
     webClientId: "331158363292-hd64i4i48r4oaij2op4l5nahpf6u0rfo.apps.googleusercontent.com",
@@ -40,13 +41,30 @@ const StyledAppHeader = styled(Text)`
 `;
 
 const LoginPage = props => {
+
+    if (props.user.email === undefined) {
+        GoogleSignin.signInSilently().then(user => {
+            if (user) {
+                console.log(user);
+
+                /*axios.post('http://tuneapp-server-1969202483.us-east-1.elb.amazonaws.com/users/userexist', user).then(response => {
+                   if (response) {
+                       props.login(user);
+                   }
+                });*/
+            }
+        }).catch(err => {
+            console.log(err);
+        });
+    }
+
     const signIn = async () => {
         try {
             await GoogleSignin.hasPlayServices();
             const {user} = await GoogleSignin.signIn();
             if (user) {
+                //axios.post('http://tuneapp-server-1969202483.us-east-1.elb.amazonaws.com/users/Register', user);
                 props.login(user);
-                console.log(user);
             }
         } catch (error) {
         }

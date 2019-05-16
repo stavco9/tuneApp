@@ -64,7 +64,7 @@ async function GetFamilliarTracksByUserId(userId, numOfActivities=300) {
         }
         preferredTracks[t] -= 2;
     });
-    
+
 
     let trackObjects = await mongoConnection.queryFromMongoDBJoin('Tracks', 'AudioFeatures', 'id', 'id',
         {'id': {
@@ -112,12 +112,12 @@ async function GetPreferredTracksByUserId(userId, numOfActivities=300) {
 async function GetUnfamilliarPopularTracksByUserId(userId, numOfActivities=1000) {
     let familliar = await GetFamilliarTracksByUserId(userId, numOfActivities);
     let popular = await mongoConnection.queryFromMongoDBJoinSort('Tracks', 'AudioFeatures', 'id', 'id', {}, familliar.length + 200, {'popularity': -1});
-    
+
     return popular.filter((p) => !familliar.some((f) => p.id == f.id));
 }
 
 async function getMyDetails(req, res){
-    
+
     if (!req.session.token){
         res.status(401).send("You are unauthorized !! Please login");
     }
@@ -132,11 +132,30 @@ async function GetPreferencesNN(userId) {
     return ((await GetUserInfo(userId)).neuralnetwork);
 }
 
+function DoesUserExist(req, response) {
+    const user =  req.body.user;
+    mongoConnection.checkIfUserExists(user).then(answer => {
+        if (answer) {
+            req.session.token.email = user.email;
+        }
+        response.send(answer)
+    });
+}
+
+function RegisterUser(req, res) {
+    const user =  req.body.user;
+    mongoConnection.addNewUser(user).then(newUser => {
+       res(user);
+    });
+}
+
 module.exports = {
     getMyDetails: getMyDetails,
     GetFamilliarTracksByUserId: GetFamilliarTracksByUserId,
     GetUnfamilliarPopularTracksByUserId: GetUnfamilliarPopularTracksByUserId,
     GetPreferredTracksByUserId: GetPreferredTracksByUserId,
     GetUserIdFromReq: GetUserIdFromReq,
-    GetPreferencesNN: GetPreferencesNN
+    GetPreferencesNN: GetPreferencesNN,
+    DoesUserExist: DoesUserExist,
+    RegisterUser: RegisterUser
 };

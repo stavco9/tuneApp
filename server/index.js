@@ -21,20 +21,16 @@ const spotifyStateKey = 'spotify_auth_state';
 const app = express();
 
 // Registering the artist routes
-const artistRoutes = require('./api/routes/artistsRoutes');
-artistRoutes(app);
+require('./api/routes/artistsRoutes')(app);
 
 // Registering the track routes
-const trackRoutes = require('./api/routes/tracksRoutes');
-trackRoutes(app);
+require('./api/routes/tracksRoutes')(app);
 
 // Registering the album routes
-const albumRoutes = require('./api/routes/albumsRoutes');
-albumRoutes(app);
+require('./api/routes/albumsRoutes')(app);
 
 // Registering the user routes
-const userRoutes = require('./api/routes/usersRoutes');
-userRoutes(app);
+require('./api/routes/usersRoutes')(app);
 
 // Registering the user routes
 const playlistRoutes = require('./api/routes/playlistRoute');

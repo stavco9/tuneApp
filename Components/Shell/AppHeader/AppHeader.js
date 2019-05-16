@@ -1,14 +1,22 @@
 import React, {Component} from "react";
 import {Text} from "react-native";
-import {Container, Header, Left, Button, Icon, Title, Body, Right} from 'native-base';
+import {Header, Left, Button, Icon, Title, Body, Right} from 'native-base';
+
+const openDrawer = () => {
+    Props.drawer._root.close()
+};
 
 export default class AppHeader extends Component<Props> {
+    constructor(props) {
+        super(props);
+    }
+
     render() {
         return (
             <Header>
                 <Left>
-                    <Button transparent onPress={() => console.log("HARA")}>
-                        <Icon name='arrow-back'/>
+                    <Button transparent onPress={()=>this.props.drawer()}>
+                        <Icon name='menu'/>
                     </Button>
                 </Left>
                 <Body>
