@@ -107,6 +107,7 @@ app.get('/home', async(req, res) => {
     }
 });
 
+/*
 app.get('/login/google', (req, res) => {
     res.statusCode = 200;
 
@@ -119,6 +120,7 @@ app.get('/login/google', (req, res) => {
         return res.redirect(googleUrl);
     }
 });
+*/
 
 app.get('/login/spotify', (req, res) => {
     res.statusCode = 200;
@@ -151,8 +153,7 @@ app.get('/login', (req, res) => {
     }
     else{
         res.setHeader('Content-Type', 'text/html');
-        res.end('<a href=\'' + googleUrl + '\'>Login with Google</a></br><a href=\'' + spotifyUrl + '\'>Login with Spotify</a>\n');
-    }
+        res.end('<!--<a href=\'' + googleUrl + '\'>Login with Google</a></br>--><a href=\'' + spotifyUrl + '\'>Login with Spotify</a>\n');    }
 
     //res.redirect('/');
 });
@@ -167,7 +168,7 @@ app.get('/logout', (req, res) => {
     res.redirect('/');
 });
 
-app.get('/remove-account', async (req, res) => {
+app.delete('/remove-account', async (req, res) => {
 
     if (!req.session.token){
         return res.redirect('/login');

@@ -14,8 +14,28 @@ async function GetLastActivitiesByUserId(userId, numOfActivities=300) {
     return (await mongoConnection.queryFromMongoDBSortedMax('ListeningAndSuggestions', {'email': userId}, {'_id': -1}, numOfActivities));
 }
 
-async function GetUserInfo(userId){
-    return (await mongoConnection.queryFromMongoDB('users', {'email': userId}))[0];
+async function GetUserInfo(req, getNeuralNetwork = false){
+    userDevMode(req);
+
+    if(req.session.token && req.session.token.email) {
+        const userId = req.session.token.email;
+        let user = [];
+
+        if(!getNeuralNetwork) {
+            user = (await mongoConnection.queryFromMongoDBProjection('users', {'email': userId}, 1, {
+                'neuralnetwork': false
+            }));
+        }
+        else {
+            user = (await mongoConnection.queryFromMongoDB('users', {'email': userId}));
+        }
+
+        if(user.length > 0) {
+            return user[0];
+        }
+    }
+
+    return null;
 }
 
 // returns
@@ -116,27 +136,76 @@ async function GetUnfamilliarPopularTracksByUserId(userId, numOfActivities=1000)
     return popular.filter((p) => !familliar.some((f) => p.id == f.id));
 }
 
-async function getMyDetails(req, res){
-    
-    if (!req.session.token){
-        res.status(401).send("You are unauthorized !! Please login");
-    }
-    else{
-        var userDetails = await mongoConnection.queryFromMongoDB("users", {"email": req.session.token.email});
-
-        res.status(200).send(userDetails);
-    }
-}
-
 async function GetPreferencesNN(userId) {
     return ((await GetUserInfo(userId)).neuralnetwork);
 }
 
+function userDevMode(req) {
+    if(process.env.ENVIRONMENT_MODE == 'dev') {
+        req.session.token = {
+            email: 'stavco9@gmail.com'
+        }
+    }
+}
+
+async function CheckIfUserExsits(user){
+    var answer = await mongoConnection.queryFromMongoDB("users", {email: user.email}, 1);
+
+    if (answer.length > 0){
+        return true;
+    }
+
+    return false;
+}
+
+async function DoesUserExist(req, response) {
+    const user =  req.body.user;
+
+    var exists = await CheckIfUserExsits(user);
+
+    if (exists){
+        req.session.token = user;
+    }
+
+    response.status(200).send(exists);
+}
+
+async function RegisterUser(req, res) {
+    
+    var statusCode = 400;
+
+    if (req.body.hasOwnProperty("user")){
+        
+        statusCode = 200;
+
+        var userToAdd = {};
+
+        const user =  req.body.user;
+
+        user["likedTracks"] = [];
+        user["unlikedTracks"] = [];
+        user["likedArtists"] = [];
+        user["unlikedArtists"] = [];
+
+        if (!await CheckIfUserExsits(user)){
+            await mongoConnection.addToMongoDB("users", user);
+        }
+
+        res.status(statusCode).send(user);
+    }
+    else{
+        res.status(statusCode).send("Bad request");
+    }
+}
+
 module.exports = {
-    getMyDetails: getMyDetails,
     GetFamilliarTracksByUserId: GetFamilliarTracksByUserId,
     GetUnfamilliarPopularTracksByUserId: GetUnfamilliarPopularTracksByUserId,
     GetPreferredTracksByUserId: GetPreferredTracksByUserId,
     GetUserIdFromReq: GetUserIdFromReq,
-    GetPreferencesNN: GetPreferencesNN
+    GetPreferencesNN: GetPreferencesNN,
+    GetUserInfo: GetUserInfo,
+    userDevMode: userDevMode,
+    DoesUserExist: DoesUserExist,
+    RegisterUser: RegisterUser
 };

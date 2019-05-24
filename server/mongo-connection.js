@@ -27,6 +27,26 @@ async function queryFromMongoDB(collectionName, queryField, limit, callback){
     }
 }
 
+async function queryFromMongoDBProjection(collectionName, queryField, limit, projection, callback){
+    
+    try{
+        const db = await MongoClient.connect(url);
+
+        var dbo = db.db(process.env.MONGO_DATABASE);
+        
+        limit = limit != undefined ? limit : 1000;
+
+        const result = await dbo.collection(collectionName).find(queryField,projection).limit(limit).toArray();
+    
+        db.close();
+    
+        return result;
+    }
+    catch(err){
+        throw err;
+    }
+}
+
 async function queryFromMongoDBSortedMax(collectionName, queryField, sortField, limit, callback){
 
     try{
@@ -181,5 +201,6 @@ module.exports = {
     deleteFromMongoDB: deleteFromMongoDB,
     queryFromMongoDBSortedMax: queryFromMongoDBSortedMax,
     queryFromMongoDBJoin: queryFromMongoDBJoin,
-    queryFromMongoDBJoinSort: queryFromMongoDBJoinSort
+    queryFromMongoDBJoinSort: queryFromMongoDBJoinSort,
+    queryFromMongoDBProjection: queryFromMongoDBProjection
 };

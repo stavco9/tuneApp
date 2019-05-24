@@ -22,6 +22,7 @@
     "googleapis": "^37.2.0",
     "moment": "^2.24.0",
     "mongodb": "^3.2.3",
+    "mongoose": "^5.5.9",
     "passport": "^0.4.0",
     "python-shell": "^1.0.7",
     "query-string": "^6.4.2",
