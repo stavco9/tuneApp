@@ -30,86 +30,91 @@ function getDate(){
 }
 
 async function buildPlaylist(req, res){
+	usersController.userDevMode(req);
 
-	// In production, unmark all the comments of user details
-	if (!req.session.token){
-		res.status(401).send('Unauthorized !! Please login');
-	}
-	else{
+	let user = usersController.GetUserInfo(req, true);
 
-		userId = res.session.token.email;
-
-		let [familliarTracks, unfamilliarTracks, userPreferencesNN] = await Promise.all([
-			usersController.GetFamilliarTracksByUserId(userId),
-			usersController.GetUnfamilliarPopularTracksByUserId(userId),
-			usersController.GetPreferencesNN(userId)
-		]);
-
-		return Recommendations.classifyMultiple(userPreferencesNN, familliarTracks, unfamilliarTracks);
-	}
+	user.then(async user =>{
+		if (user == null){
+			res.status(401).send('Unauthorized !! Please login');
+		}
+		else{
+			userId = user.email;
+	
+			let [familliarTracks, unfamilliarTracks, userPreferencesNN] = await Promise.all([
+				usersController.GetFamilliarTracksByUserId(user),
+				usersController.GetUnfamilliarPopularTracksByUserId(user),
+				usersController.GetPreferencesNN(user)
+			]);
+	
+			return Recommendations.classifyMultiple(userPreferencesNN, familliarTracks, unfamilliarTracks);
+		}
+	})
 }
 
 async function listenPlaylist(req, res){
-	
-	// In production, unmark all the comments of user details
-	if (!req.session.token){
-		res.status(401).send('Unauthorized !! Please login');
-	}
-	else{
+	usersController.userDevMode(req);
 
-		var currentTime = getDate();
+	let user = usersController.GetUserInfo(req, true);
 
-		var startListeningTime = moment(req.body.startListeningTime, 'YYYY-MM-DD HH:mm:ss');
+	user.then(async user => {
 
-		var trackId = req.body.trackId;
-
-		var durationOfListening = moment(currentTime, 'YYYY-MM-DD HH:mm:ss').diff(startListeningTime, 'milliseconds');
-
-		var trackromDB = await mongoConnection.queryFromMongoDB('Tracks', {'id': trackId});
-
-		if(trackromDB.length < 1){
-			res.status(404).send("Track " + trackId + " not found");
+		if (!req.session.token){
+			res.status(401).send('Unauthorized !! Please login');
 		}
 		else{
-			var listeningPercent = (durationOfListening * 100 / trackromDB[0].duration_ms);
 
-			var score = (listeningPercent - 50) / 10;
+			var currentTime = getDate();
 
-			if (req.body.isSelectedByUser == "true"){
-				score += 1;
+			var startListeningTime = moment(req.body.startListeningTime, 'YYYY-MM-DD HH:mm:ss');
+
+			var trackId = req.body.trackId;
+
+			var durationOfListening = moment(currentTime, 'YYYY-MM-DD HH:mm:ss').diff(startListeningTime, 'milliseconds');
+
+			//var trackromDB = await mongoConnection.queryFromMongoDB('Tracks', {'id': trackId});
+
+			var trackFromDB = await mongoConnection.queryFromMongoDBJoin('Tracks', 'AudioFeatures', 'id', 'id', {'id': trackId}, 1);
+
+			if(trackFromDB.length < 1){
+				res.status(404).send("Track " + trackId + " not found");
 			}
+			else{
+				var listeningPercent = (durationOfListening * 100 / trackFromDB[0].duration_ms);
 
-			var listeningData = {
-				trackId: req.body.trackId,
-				email: req.session.token.email,
-				//email: req.session.token.email,
-				dateTime: currentTime,
-				duration: durationOfListening,
-				listeningPercent: listeningPercent,
-				score: score,
-				isListened: req.body.isListened,
-				isSelectedByUser: req.body.isSelectedByUser
-			};
-	
-			try{
-				await mongoConnection.addToMongoDB('ListeningAndSuggestions', listeningData);
+				var score = (listeningPercent - 50) / 10;
 
-				//res.status(200).send(listeningData);
+				if (req.body.isSelectedByUser == "true"){
+					score += 1;
+				}
+
+				var listeningData = {
+					trackId: req.body.trackId,
+					email: req.session.token.email,
+					dateTime: currentTime,
+					duration: durationOfListening,
+					listeningPercent: listeningPercent,
+					score: score,
+					isListened: req.body.isListened,
+					isSelectedByUser: req.body.isSelectedByUser
+				};
+
+				try{
+					await mongoConnection.addToMongoDB('ListeningAndSuggestions', listeningData);
+
+					const trainedNN = await Recommendations.trainNN(user.neuralnetwork, trackFromDB[0], score > 0 ? true : false)
+
+					await mongoConnection.updateMongoDB('users', {'email': user.email}, {'neuralnetwork': trainedNN});
+				}
+				catch{
+					res.status(500).send("Error while processing this request");	
+				}
+		
+				res.status(200).send("success");
 			}
-			catch{
-				res.status(500).send("Error while processing this request");	
-			}
-	
-			res.status(200).send("success");
 		}
-	}
+	})
 }
-
-var arrayUnique = function (arr) {
-	return arr.filter(function(item, index){
-		return arr.indexOf(item) >= index;
-	});
-};
 
 module.exports = {
 	buildPlaylist: buildPlaylist,

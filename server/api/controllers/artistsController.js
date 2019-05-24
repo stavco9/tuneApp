@@ -1,8 +1,7 @@
 //'use strict';
 
-var spotifyAuthentication = require('../../spotify-authentication');
 const mongoConnection = require('../../mongo-connection');
-const request = require('request'); // "Request" library
+const users = require('./usersController');
 
 // Get all artists from DB
 async function getAllArtists(req, res) {
@@ -49,30 +48,27 @@ var arrayUnique = function (arr) {
 	});
 };
 
-// Saves a new artist, exposed at POST /artists
 function LikeArtistById(req, res) {
-	var artistResult = mongoConnection.queryFromMongoDB('Artists', {'id': req.body.artistId});
-	artistResult.then(async function (result) {
-		if (result.length < 1) {
-			res.status(404).send('The artist with the ID ' + req.body.artistId + " was not found!");
+	users.userDevMode(req);
+	let user = users.GetUserInfo(req);
+
+	user.then(user =>{
+		if(user == null) {
+			res.status(401).send('You are unauthorized! Please login!');
 		}
-		else {
-			if (req.session.token == null){
-				res.status(401).send('You are unauthorized! Please login!');
+
+		var artistResult = mongoConnection.queryFromMongoDB('Artists', {'id': req.body.artistId});
+		artistResult.then(async function (result) {
+			if (result.length < 1) {
+				res.status(404).send('The artist with the ID ' + req.body.artistId + " was not found!");
 			}
-			else{
-				var email = req.session.token.email;
-
-				// REPLACE THE EMAIL WITH req.session.token.email IT SHOULD WORK IF YOU'RE USING A REAL WEB APP!
-				//var user = await mongoConnection.queryFromMongoDB('users', {'email': 'stavco9@gmail.com'});
-				var user = await mongoConnection.queryFromMongoDB('users', {'email': email});
-
-				var likedArtists = user[0].likedArtists;
+			else {
+				var likedArtists = user.likedArtists;
 				if (likedArtists === undefined) {
 					likedArtists = [];
 				}
 
-				var unlikedArtists = user[0].unlikedArtists;
+				var unlikedArtists = user.unlikedArtists;
 				if (unlikedArtists === undefined) {
 					unlikedArtists = [];
 				}
@@ -98,52 +94,45 @@ function LikeArtistById(req, res) {
 					await mongoConnection.updateMongoDB('Artists', {'id': req.body.artistId}, {unlikes: result[0].unlikes});
 				}
 
-				// REPLACE THE EMAIL WITH req.session.token.email IT SHOULD WORK IF YOU'RE USING A REAL WEB APP!
-				//await mongoConnection.updateMongoDB('users', {'email': email}, {likedArtists: likedArtists});
-				await mongoConnection.updateMongoDB('users', {'email': email}, {likedArtists: likedArtists, unlikedArtists: unlikedArtists});
+				await mongoConnection.updateMongoDB('users', {'email': user.email}, {likedArtists: likedArtists, unlikedArtists: unlikedArtists});
 
 				res.status(200).send('Liked artist ' + req.body.artistId);
 			}
-		}
-	});
+		});
+	})
 }
 
 // Saves a new artist, exposed at POST /artists
 function UnlikeArtistById(req, res) {
-	var artistResult = mongoConnection.queryFromMongoDB('Artists', {'id': req.body.artistId});
-	artistResult.then(async function (result) {
-		if (result.length < 1) {
-			res.status(404).send('The artist with the ID ' + req.body.artistId + " was not found!");
+	users.userDevMode(req);
+
+	let user = users.GetUserInfo(req);
+
+	user.then(user => {
+		if(user == null) {
+			res.status(401).send('You are unauthorized! Please login!');
 		}
-		else {
-			if (req.session.token == null){
-				res.status(401).send('You are unauthorized! Please login!');
+
+		var artistResult = mongoConnection.queryFromMongoDB('Artists', {'id': req.body.artistId});
+		artistResult.then(async function (result) {
+			if (result.length < 1) {
+				res.status(404).send('The artist with the ID ' + req.body.artistId + " was not found!");
 			}
-			else{
-				var email = req.session.token.email;
-
-				// REPLACE THE EMAIL WITH req.session.token.email IT SHOULD WORK IF YOU'RE USING A REAL WEB APP!
-				//var user = await mongoConnection.queryFromMongoDB('users', {'email': 'stavco9@gmail.com'});
-				var user = await mongoConnection.queryFromMongoDB('users', {'email': email});
-
-				if (user.length < 1) {
-					res.status(401).send('You are unauthorized! Please login!');
-				}
-
-				var unlikedArtists = user[0].unlikedArtists;
-				if (unlikedArtists === undefined) {
-					unlikedArtists = [];
-				}
-
-				var likedArtists = user[0].likedArtists;
+			else {
+				var likedArtists = user.likedArtists;
 				if (likedArtists === undefined) {
 					likedArtists = [];
+				}
+
+				var unlikedArtists = user.unlikedArtists;
+				if (unlikedArtists === undefined) {
+					unlikedArtists = [];
 				}
 
 				var length = unlikedArtists.length;
 				unlikedArtists.push(req.body.artistId);
 				unlikedArtists = arrayUnique(unlikedArtists);
-				
+					
 				// Add the artist to the unliked artists
 				if (length !== unlikedArtists.length) {
 					if (result[0].unlikes === undefined) { result[0].unlikes = 0; }
@@ -161,14 +150,12 @@ function UnlikeArtistById(req, res) {
 					await mongoConnection.updateMongoDB('Artists', {'id': req.body.artistId}, {likes: result[0].likes});
 				}
 
-				// REPLACE THE EMAIL WITH req.session.token.email IT SHOULD WORK IF YOU'RE USING A REAL WEB APP!
-				//await mongoConnection.updateMongoDB('users', {'email': email}, {unlikedArtists: unlikedArtists});
-				await mongoConnection.updateMongoDB('users', {'email': email}, {unlikedArtists: unlikedArtists, likedArtists: likedArtists});
+				await mongoConnection.updateMongoDB('users', {'email': user.email}, {unlikedArtists: unlikedArtists});
 
 				res.status(200).send('unliked artist ' + req.body.artistId);
 			}
-		}
-	});
+		});
+	})
 }
 
 // artists/top/artistId

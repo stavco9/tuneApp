@@ -120,7 +120,6 @@ app.get('/login/google', (req, res) => {
         return res.redirect(googleUrl);
     }
 });
-
 */
 
 app.get('/login/spotify', (req, res) => {

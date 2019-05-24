@@ -4,9 +4,9 @@ const mongoConnection = require('../../mongo-connection');
 var asyncPolling = require('async-polling');
 const request = require('request'); // "Request" library
 const reqPromise = require('request-promise');
-const usersController = require('./usersController');
+const users = require('./usersController');
 const searchKeys = [ 'a', 'e', 'i', 'o', 'u', 'er', 'ar', 'or', 'de', 'do' ];
-const { SimilarTracks } = require('../../MachineLearning/ml');
+const ml = require('../../MachineLearning/ml');
 
 const spotifyBaseUrl = "https://api.spotify.com/v1/";
 
@@ -201,56 +201,44 @@ var arrayUnique = function (arr) {
 
 // Saves a new artist, exposed at POST /artists
 function LikeTrackById(req, res) {
-	var trackResult = mongoConnection.queryFromMongoDB('Tracks', {'id': req.body.trackId});
-	trackResult.then(async function (result) {
-		if (result.length < 1) {
-			res.status(404).send('The track with the ID ' + req.body.trackId + " was not found!");
+	users.userDevMode(req);
+	let user = users.GetUserInfo(req, true);
+
+	user.then(user =>{
+		if(user == null) {
+			res.status(401).send('You are unauthorized! Please login!');
 		}
-		else {
-			if (req.session.token == null){
-				res.status(401).send('You are unauthorized! Please login!');
+	
+		var trackResult = mongoConnection.queryFromMongoDBJoin("Tracks", "AudioFeatures", "id", "id", {"id": req.body.trackId});
+		trackResult.then(async function (result) {
+			if (result.length < 1) {
+				res.status(404).send('The track with the ID ' + req.body.trackId + " was not found!");
 			}
-			else{
-				var email = req.session.token.email;
-
-				// REPLACE THE EMAIL WITH req.session.token.email IT SHOULD WORK IF YOU'RE USING A REAL WEB APP!
-				//var user = await mongoConnection.queryFromMongoDB('users', {'email': 'stavco9@gmail.com'});
-				var user = await mongoConnection.queryFromMongoDB('users', {'email': email});
-
-				if (user.length < 1) {
-					res.status(401).send('You are unauthorized! Please login!');
-				}
-
-				var likedTracks = user[0].likedTracks;
-					
+			else {
+				var likedTracks = user.likedTracks;
 				if (likedTracks === undefined) {
 					likedTracks = [];
 				}
-
+	
 				if (req.body.hasOwnProperty('absolutely') && req.body.absolutely != "false" && req.body.absolutely != "0"){
-
 					var length = likedTracks.length;
 					likedTracks.push(req.body.trackId);
 					likedTracks = arrayUnique(likedTracks);
-
+					
 					// Add the track to the liked tracks
 					if (length !== likedTracks.length) {
 						if (result[0].likes === undefined) { result[0].likes = 0; }
-
+	
 						result[0].likes++;
 						await mongoConnection.updateMongoDB('Tracks', {'id': req.body.trackId}, {likes: result[0].likes});
-
-						await mongoConnection.updateMongoDB('AudioFeatures', {'id': req.body.trackId}, {likes: result[0].likes});
 					}
 				}
-
-				var unlikedTracks = user[0].unlikedTracks;
-
+	
+				var unlikedTracks = user.unlikedTracks;
 				if (unlikedTracks === undefined) {
 					unlikedTracks = [];
 				}
-				
-
+		
 				// Remove the liked track from the unlike tracksp if exists
 				var index = unlikedTracks.indexOf(req.body.trackId);
 				if (index > -1) {
@@ -258,121 +246,105 @@ function LikeTrackById(req, res) {
 					if (result[0].unlikes === undefined) { result[0].unlikes = 1; }
 					result[0].unlikes--;
 					await mongoConnection.updateMongoDB('Tracks', {'id': req.body.trackId}, {unlikes: result[0].unlikes});
-
-					await mongoConnection.updateMongoDB('AudioFeatures', {'id': req.body.trackId}, {unlikes: result[0].unlikes});
 				}
-
-				// REPLACE THE EMAIL WITH req.session.token.email IT SHOULD WORK IF YOU'RE USING A REAL WEB APP!
-				//await mongoConnection.updateMongoDB('users', {'email': email}, {likedTracks: likedTracks});
-				await mongoConnection.updateMongoDB('users', {'email': email}, {likedTracks: likedTracks, unlikedTracks: unlikedTracks});
-
+	
+				const trainedNN = ml.Recommendations.trainNN(user.neuralnetwork, result[0], true);
+				await mongoConnection.updateMongoDB('users', {'email': user.email}, {'likedTracks': likedTracks, 'unlikedTracks': unlikedTracks, 'neuralnetwork': trainedNN});
 				res.status(200).send('Liked track ' + req.body.trackId);
 			}
-		}
-	});
+		});
+	})
 }
 
 // Saves a new artist, exposed at POST /artists
 function UnlikeTrackById(req, res) {
-	var trackResult = mongoConnection.queryFromMongoDB('Tracks', {'id': req.body.trackId});
-	trackResult.then(async function (result) {
-		if (result.length < 1) {
-			res.status(404).send('The track with the ID ' + req.body.trackId + " was not found!");
+	users.userDevMode(req);
+	let user = users.GetUserInfo(req, true);
+
+	user.then(user =>{
+		if(user == null) {
+			res.status(401).send('You are unauthorized! Please login!');
 		}
-		else {
-			if (req.session.token == null){
-				res.status(401).send('You are unauthorized! Please login!');
+
+		var trackResult = mongoConnection.queryFromMongoDBJoin("Tracks", "AudioFeatures", "id", "id", {"id": req.body.trackId});
+		trackResult.then(async function (result) {
+			if (result.length < 1) {
+				res.status(404).send('The track with the ID ' + req.body.trackId + " was not found!");
 			}
-			else{
-				var email = req.session.token.email;
-
-				// REPLACE THE EMAIL WITH req.session.token.email IT SHOULD WORK IF YOU'RE USING A REAL WEB APP!
-				//var user = await mongoConnection.queryFromMongoDB('users', {'email': 'stavco9@gmail.com'});
-				var user = await mongoConnection.queryFromMongoDB('users', {'email': email});
-
-				if (user.length < 1) {
-					res.status(401).send('You are unauthorized! Please login!');
-				}
-
-				var unlikedTracks = user[0].unlikedTracks;
-				if (unlikedTracks === undefined) {
-					unlikedTracks = [];
-				}
-
-				if (req.body.hasOwnProperty('absolutely') && req.body.absolutely != "false" && req.body.absolutely != "0"){
-
-					var length = unlikedTracks.length;
-					unlikedTracks.push(req.body.trackId);
-					unlikedTracks = arrayUnique(unlikedTracks);
-	
-					// Add the track to the unliked tracks
-					if (length !== unlikedTracks.length) {
-						if (result[0].unlikes === undefined) { result[0].unlikes = 0; }
-	
-						result[0].unlikes++;
-						await mongoConnection.updateMongoDB('Tracks', {'id': req.body.trackId}, {unlikes: result[0].unlikes});
-	
-						await mongoConnection.updateMongoDB('AudioFeatures', {'id': req.body.trackId}, {unlikes: result[0].unlikes});
-					}
-				}
-
-				var likedTracks = user[0].likedTracks;
+			else {
+				var likedTracks = user.likedTracks;
 				if (likedTracks === undefined) {
 					likedTracks = [];
 				}
 
-				// Remove the unliked track from the likes list if exists
+				if (req.body.hasOwnProperty('absolutely') && req.body.absolutely != "false" && req.body.absolutely != "0"){
+					var length = unlikedTracks.length;
+					unlikedTracks.push(req.body.trackId);
+					unlikedTracks = arrayUnique(unlikedTracks);
+					
+					// Add the track to the liked tracks
+					if (length !== unlikedTracks.length) {
+						if (result[0].unlikes === undefined) { result[0].unlikes = 0; }
+
+						result[0].unlikes++;
+						await mongoConnection.updateMongoDB('Tracks', {'id': req.body.trackId}, {unlikes: result[0].unlikes});
+					}
+				}
+
+				var unlikedTracks = user.unlikedTracks;
+				if (unlikedTracks === undefined) {
+					unlikedTracks = [];
+				}
+		
+				// Remove the liked track from the unlike tracksp if exists
 				var index = likedTracks.indexOf(req.body.trackId);
 				if (index > -1) {
 					likedTracks.splice(index, 1);
 					if (result[0].likes === undefined) { result[0].likes = 1; }
 					result[0].likes--;
 					await mongoConnection.updateMongoDB('Tracks', {'id': req.body.trackId}, {likes: result[0].likes});
-
-					await mongoConnection.updateMongoDB('AudioFeatures', {'id': req.body.trackId}, {likes: result[0].likes});
 				}
-				
-				// REPLACE THE EMAIL WITH req.session.token.email IT SHOULD WORK IF YOU'RE USING A REAL WEB APP!
-				await mongoConnection.updateMongoDB('users', {'email': email}, {likedTracks: likedTracks, unlikedTracks: unlikedTracks});
-				//await mongoConnection.updateMongoDB('users', {'email': email}, {likedTracks: likedTracks});
 
+				const trainedNN = await ml.Recommendations.trainNN(user.neuralnetwork, result[0], false);
+
+				await mongoConnection.updateMongoDB('users', {'email': user.email}, {'likedTracks': likedTracks, 'unlikedTracks': unlikedTracks, 'neuralnetwork': trainedNN});
 				res.status(200).send('Unliked track ' + req.body.trackId);
 			}
-		}
-	});
+		});
+	})
 }
 
 // MACHINE LEARNING !!!
-// LIOR CURRENTLY WORKING ON IT @@@@@@@@@@@@@@@@@@@@@@@@
-// DO NOT CHANGE IT @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
 // in: trackId
 // out: [ { trackId, trackName, artistName } ]
 async function GetSimilarTracksById(req, res) {
-	let trackId = req.params.trackId;
+	users.userDevMode(req);
 
-    let baseTrack = await mongoConnection.queryFromMongoDBJoin("Tracks", "AudioFeatures", "id", "id", {"id": trackId});
+	let user = users.GetUserInfo(req, false);
 
-	if (baseTrack.length < 1){
-		res.status(404).send("Track " + trackId + " was not found");
-	}
-	else{
-			let userId = "null";
-			if (req.session.token == null){
-				res.status(401).send('You are unauthorized! Please login!');
-			}
-			else{
-				if (req.session.token != null){
-					userId = req.session.token.email;
-				}
+	user.then(async user =>{
 
-				let preferredTracks = await usersController.GetPreferredTracksByUserId(userId, 1000);
-				let unfamilliarTracks = await usersController.GetUnfamilliarPopularTracksByUserId(userId, 1000);
-				let allTestedTracks = [...preferredTracks, ...unfamilliarTracks];
-			
-				res.status(200).send(await SimilarTracks.search(baseTrack[0], allTestedTracks));
-			}
-	}
+		if(user == null) {
+			res.status(401).send('You are unauthorized! Please login!');
+		}
+
+		let trackId = req.params.trackId;
+
+		let baseTrack = await mongoConnection.queryFromMongoDBJoin("Tracks", "AudioFeatures", "id", "id", {"id": trackId});
+	
+		if (baseTrack.length < 1){
+			res.status(404).send("Track " + trackId + " was not found");
+		}
+		else{
+			//userId = user.email;
+
+			let preferredTracks = await users.GetPreferredTracksByUserId(user, 1000);
+			let unfamilliarTracks = await users.GetUnfamilliarPopularTracksByUserId(user, 1000);
+			let allTestedTracks = [...preferredTracks, ...unfamilliarTracks];
+		
+			res.status(200).send(await ml.SimilarTracks.search(baseTrack[0], allTestedTracks));
+		}
+	})
 }
 
 // tracks/top/trackId

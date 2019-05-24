@@ -25,12 +25,12 @@ module.exports = function(app) {
      await usersController.getMyDetails(req, res);
     })
 
-  app.route('/users/userexist')
+    app.route('/users/userexist')
       .post(async function(req, res){
         await usersController.DoesUserExist(req, res)
       });
 
-    app.route('/users/register')
+     app.route('/users/register')
     .post(async function(req, res){
       await usersController.RegisterUser(req, res)
     });

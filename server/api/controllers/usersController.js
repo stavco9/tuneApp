@@ -14,8 +14,28 @@ async function GetLastActivitiesByUserId(userId, numOfActivities=300) {
     return (await mongoConnection.queryFromMongoDBSortedMax('ListeningAndSuggestions', {'email': userId}, {'_id': -1}, numOfActivities));
 }
 
-async function GetUserInfo(userId){
-    return (await mongoConnection.queryFromMongoDB('users', {'email': userId}))[0];
+async function GetUserInfo(req, getNeuralNetwork = false){
+    userDevMode(req);
+
+    if(req.session.token && req.session.token.email) {
+        const userId = req.session.token.email;
+        let user = [];
+
+        if(!getNeuralNetwork) {
+            user = (await mongoConnection.queryFromMongoDBProjection('users', {'email': userId}, 1, {
+                'neuralnetwork': false
+            }));
+        }
+        else {
+            user = (await mongoConnection.queryFromMongoDB('users', {'email': userId}));
+        }
+
+        if(user.length > 0) {
+            return user[0];
+        }
+    }
+
+    return null;
 }
 
 // returns
@@ -28,19 +48,19 @@ async function GetUserInfo(userId){
 //          scoreForUser
 //      }
 // ]
-async function GetFamilliarTracksByUserId(userId, numOfActivities=300) {
+async function GetFamilliarTracksByUserId(user, numOfActivities=300) {
     let preferredTracks = {};
-    let lastActivities = (await GetLastActivitiesByUserId(userId, numOfActivities)).reverse();
+    let lastActivities = (await GetLastActivitiesByUserId(user.email, numOfActivities)).reverse();
     let likes = [];
     let unlikes = [];
 
-    let userInfo = await GetUserInfo(userId);
+    //let userInfo = await GetUserInfo(userId);
 
-    if (userInfo.hasOwnProperty('likedTracks')){
-        likes = userInfo.likedTracks;
+    if (user.hasOwnProperty('likedTracks')){
+        likes = user.likedTracks;
     }
-    if (userInfo.hasOwnProperty('unlikedTracks')){
-        unlikes = userInfo.unlikedTracks;
+    if (user.hasOwnProperty('unlikedTracks')){
+        unlikes = user.unlikedTracks;
     }
     
     let scale = 1;
@@ -94,8 +114,8 @@ async function GetFamilliarTracksByUserId(userId, numOfActivities=300) {
 //         ...
 //     }
 // ]
-async function GetPreferredTracksByUserId(userId, numOfActivities=300) {
-    return ((await GetFamilliarTracksByUserId(userId, numOfActivities))
+async function GetPreferredTracksByUserId(user, numOfActivities=300) {
+    return ((await GetFamilliarTracksByUserId(user, numOfActivities))
         .filter(t => t.scoreForUser > 0));
 }
 
@@ -110,27 +130,23 @@ async function GetPreferredTracksByUserId(userId, numOfActivities=300) {
 //         ...
 //     }
 // ]
-async function GetUnfamilliarPopularTracksByUserId(userId, numOfActivities=1000) {
-    let familliar = await GetFamilliarTracksByUserId(userId, numOfActivities);
+async function GetUnfamilliarPopularTracksByUserId(user, numOfActivities=1000) {
+    let familliar = await GetFamilliarTracksByUserId(user, numOfActivities);
     let popular = await mongoConnection.queryFromMongoDBJoinSort('Tracks', 'AudioFeatures', 'id', 'id', {}, familliar.length + 200, {'popularity': -1});
     
     return popular.filter((p) => !familliar.some((f) => p.id == f.id));
 }
 
-async function getMyDetails(req, res){
-    
-    if (!req.session.token){
-        res.status(401).send("You are unauthorized !! Please login");
-    }
-    else{
-        var userDetails = await mongoConnection.queryFromMongoDB("users", {"email": req.session.token.email});
-
-        res.status(200).send(userDetails);
-    }
+async function GetPreferencesNN(user) {
+    return (user.neuralnetwork);
 }
 
-async function GetPreferencesNN(userId) {
-    return ((await GetUserInfo(userId)).neuralnetwork);
+function userDevMode(req) {
+    if(process.env.ENVIRONMENT_MODE == 'dev') {
+        req.session.token = {
+            email: 'stavco9@gmail.com'
+        }
+    }
 }
 
 async function CheckIfUserExsits(user){
@@ -155,7 +171,7 @@ async function DoesUserExist(req, response) {
     response.status(200).send(exists);
 }
 
- async function RegisterUser(req, res) {
+async function RegisterUser(req, res) {
     
     var statusCode = 400;
 
@@ -184,12 +200,13 @@ async function DoesUserExist(req, response) {
 }
 
 module.exports = {
-    getMyDetails: getMyDetails,
     GetFamilliarTracksByUserId: GetFamilliarTracksByUserId,
     GetUnfamilliarPopularTracksByUserId: GetUnfamilliarPopularTracksByUserId,
     GetPreferredTracksByUserId: GetPreferredTracksByUserId,
     GetUserIdFromReq: GetUserIdFromReq,
     GetPreferencesNN: GetPreferencesNN,
+    GetUserInfo: GetUserInfo,
+    userDevMode: userDevMode,
     DoesUserExist: DoesUserExist,
     RegisterUser: RegisterUser
 };
