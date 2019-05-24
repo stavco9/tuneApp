@@ -56,49 +56,51 @@ function LikeArtistById(req, res) {
 		if(user == null) {
 			res.status(401).send('You are unauthorized! Please login!');
 		}
+		else{
 
-		var artistResult = mongoConnection.queryFromMongoDB('Artists', {'id': req.body.artistId});
-		artistResult.then(async function (result) {
-			if (result.length < 1) {
-				res.status(404).send('The artist with the ID ' + req.body.artistId + " was not found!");
-			}
-			else {
-				var likedArtists = user.likedArtists;
-				if (likedArtists === undefined) {
-					likedArtists = [];
+			var artistResult = mongoConnection.queryFromMongoDB('Artists', {'id': req.body.artistId});
+			artistResult.then(async function (result) {
+				if (result.length < 1) {
+					res.status(404).send('The artist with the ID ' + req.body.artistId + " was not found!");
 				}
-
-				var unlikedArtists = user.unlikedArtists;
-				if (unlikedArtists === undefined) {
-					unlikedArtists = [];
+				else {
+					var likedArtists = user.likedArtists;
+					if (likedArtists === undefined) {
+						likedArtists = [];
+					}
+	
+					var unlikedArtists = user.unlikedArtists;
+					if (unlikedArtists === undefined) {
+						unlikedArtists = [];
+					}
+	
+					var length = likedArtists.length;
+					likedArtists.push(req.body.artistId);
+					likedArtists = arrayUnique(likedArtists);
+					
+					// Add the artist to the liked artists
+					if (length !== likedArtists.length) {
+						if (result[0].likes === undefined) { result[0].likes = 0; }
+	
+						result[0].likes++;
+						await mongoConnection.updateMongoDB('Artists', {'id': req.body.artistId}, {likes: result[0].likes});
+					}
+	
+					// Remove the liked artist from the unlike artists if exists
+					var index = unlikedArtists.indexOf(req.body.artistId);
+					if (index > -1) {
+						unlikedArtists.splice(index, 1);
+						if (result[0].unlikes === undefined) { result[0].unlikes = 1; }
+						result[0].unlikes--;
+						await mongoConnection.updateMongoDB('Artists', {'id': req.body.artistId}, {unlikes: result[0].unlikes});
+					}
+	
+					res.status(200).send('Liked artist ' + req.body.artistId);
+	
+					mongoConnection.updateMongoDB('users', {'email': user.email}, {likedArtists: likedArtists, unlikedArtists: unlikedArtists});
 				}
-
-				var length = likedArtists.length;
-				likedArtists.push(req.body.artistId);
-				likedArtists = arrayUnique(likedArtists);
-				
-				// Add the artist to the liked artists
-				if (length !== likedArtists.length) {
-					if (result[0].likes === undefined) { result[0].likes = 0; }
-
-					result[0].likes++;
-					await mongoConnection.updateMongoDB('Artists', {'id': req.body.artistId}, {likes: result[0].likes});
-				}
-
-				// Remove the liked artist from the unlike artists if exists
-				var index = unlikedArtists.indexOf(req.body.artistId);
-				if (index > -1) {
-					unlikedArtists.splice(index, 1);
-					if (result[0].unlikes === undefined) { result[0].unlikes = 1; }
-					result[0].unlikes--;
-					await mongoConnection.updateMongoDB('Artists', {'id': req.body.artistId}, {unlikes: result[0].unlikes});
-				}
-
-				res.status(200).send('Liked artist ' + req.body.artistId);
-
-				mongoConnection.updateMongoDB('users', {'email': user.email}, {likedArtists: likedArtists, unlikedArtists: unlikedArtists});
-			}
-		});
+			});
+		}
 	})
 }
 
@@ -112,49 +114,51 @@ function UnlikeArtistById(req, res) {
 		if(user == null) {
 			res.status(401).send('You are unauthorized! Please login!');
 		}
+		else{
 
-		var artistResult = mongoConnection.queryFromMongoDB('Artists', {'id': req.body.artistId});
-		artistResult.then(async function (result) {
-			if (result.length < 1) {
-				res.status(404).send('The artist with the ID ' + req.body.artistId + " was not found!");
-			}
-			else {
-				var likedArtists = user.likedArtists;
-				if (likedArtists === undefined) {
-					likedArtists = [];
+			var artistResult = mongoConnection.queryFromMongoDB('Artists', {'id': req.body.artistId});
+			artistResult.then(async function (result) {
+				if (result.length < 1) {
+					res.status(404).send('The artist with the ID ' + req.body.artistId + " was not found!");
 				}
-
-				var unlikedArtists = user.unlikedArtists;
-				if (unlikedArtists === undefined) {
-					unlikedArtists = [];
+				else {
+					var likedArtists = user.likedArtists;
+					if (likedArtists === undefined) {
+						likedArtists = [];
+					}
+	
+					var unlikedArtists = user.unlikedArtists;
+					if (unlikedArtists === undefined) {
+						unlikedArtists = [];
+					}
+	
+					var length = unlikedArtists.length;
+					unlikedArtists.push(req.body.artistId);
+					unlikedArtists = arrayUnique(unlikedArtists);
+						
+					// Add the artist to the unliked artists
+					if (length !== unlikedArtists.length) {
+						if (result[0].unlikes === undefined) { result[0].unlikes = 0; }
+	
+						result[0].unlikes++;
+						await mongoConnection.updateMongoDB('Artists', {'id': req.body.artistId}, {unlikes: result[0].unlikes});
+					}
+	
+					// Remove the unliked artist from the liked artists if exists
+					var index = likedArtists.indexOf(req.body.artistId);
+					if (index > -1) {
+						likedArtists.splice(index, 1);
+						if (result[0].likes === undefined) { result[0].likes = 1; }
+						result[0].likes--;
+						await mongoConnection.updateMongoDB('Artists', {'id': req.body.artistId}, {likes: result[0].likes});
+					}
+	
+					res.status(200).send('unliked artist ' + req.body.artistId);
+	
+					mongoConnection.updateMongoDB('users', {'email': user.email}, {likedArtists: likedArtists, unlikedArtists: unlikedArtists});
 				}
-
-				var length = unlikedArtists.length;
-				unlikedArtists.push(req.body.artistId);
-				unlikedArtists = arrayUnique(unlikedArtists);
-					
-				// Add the artist to the unliked artists
-				if (length !== unlikedArtists.length) {
-					if (result[0].unlikes === undefined) { result[0].unlikes = 0; }
-
-					result[0].unlikes++;
-					await mongoConnection.updateMongoDB('Artists', {'id': req.body.artistId}, {unlikes: result[0].unlikes});
-				}
-
-				// Remove the unliked artist from the liked artists if exists
-				var index = likedArtists.indexOf(req.body.artistId);
-				if (index > -1) {
-					likedArtists.splice(index, 1);
-					if (result[0].likes === undefined) { result[0].likes = 1; }
-					result[0].likes--;
-					await mongoConnection.updateMongoDB('Artists', {'id': req.body.artistId}, {likes: result[0].likes});
-				}
-
-				res.status(200).send('unliked artist ' + req.body.artistId);
-
-				mongoConnection.updateMongoDB('users', {'email': user.email}, {likedArtists: likedArtists, unlikedArtists: unlikedArtists});
-			}
-		});
+			});
+		}
 	})
 }
 

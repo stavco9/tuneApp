@@ -22,9 +22,7 @@ async function GetUserInfo(req, getNeuralNetwork = false){
         let user = [];
 
         if(!getNeuralNetwork) {
-            user = (await mongoConnection.queryFromMongoDBProjection('users', {'email': userId}, 1, {
-                'neuralnetwork': false
-            }));
+            user = (await mongoConnection.queryFromMongoDBProjection('users', {'email': userId}, 1, {neuralnetwork: 0}));
         }
         else {
             user = (await mongoConnection.queryFromMongoDB('users', {'email': userId}));
@@ -149,8 +147,24 @@ function userDevMode(req) {
     }
 }
 
+async function getMyDetails(req, res){
+    userDevMode(req);
+
+    user = GetUserInfo(req, false);
+
+    user.then(user =>{ 
+        if (user == null){
+            res.status(401).send("You are unauthorized !! Please login");
+        }
+        else{
+            res.status(200).send(user);
+        }
+    })
+}
+
 async function CheckIfUserExsits(user){
-    var answer = await mongoConnection.queryFromMongoDB("users", {email: user.email}, 1);
+
+    var answer = await mongoConnection.queryFromMongoDBProjection("users", {'email': user.email}, 1, {'neuralnetwork': 0});
 
     if (answer.length > 0){
         return true;
@@ -208,5 +222,6 @@ module.exports = {
     GetUserInfo: GetUserInfo,
     userDevMode: userDevMode,
     DoesUserExist: DoesUserExist,
-    RegisterUser: RegisterUser
+    RegisterUser: RegisterUser,
+    getMyDetails: getMyDetails
 };

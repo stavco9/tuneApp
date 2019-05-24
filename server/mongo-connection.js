@@ -36,7 +36,7 @@ async function queryFromMongoDBProjection(collectionName, queryField, limit, pro
         
         limit = limit != undefined ? limit : 1000;
 
-        const result = await dbo.collection(collectionName).find(queryField,projection).limit(limit).toArray();
+        const result = await dbo.collection(collectionName).find(queryField, { 'projection': projection }).limit(limit).toArray();
     
         db.close();
     
