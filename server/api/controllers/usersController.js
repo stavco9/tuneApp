@@ -132,7 +132,7 @@ async function GetPreferredTracksByUserId(user, numOfActivities=300) {
 // ]
 async function GetUnfamilliarPopularTracksByUserId(user, numOfActivities=1000) {
     let familliar = await GetFamilliarTracksByUserId(user, numOfActivities);
-    let popular = await mongoConnection.queryFromMongoDBJoinSort('Tracks', 'AudioFeatures', 'id', 'id', {}, familliar.length + 200, {'popularity': -1});
+    let popular = await mongoConnection.queryFromMongoDBJoinSort('Tracks', 'AudioFeatures', 'id', 'id', {}, familliar.length + 100, {'popularity': -1});
     
     return popular.filter((p) => !familliar.some((f) => p.id == f.id));
 }

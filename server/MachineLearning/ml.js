@@ -143,16 +143,16 @@ async function classifyForRecommendedTracks_neuralnetwork(neuralNetwork, testedT
     });
 
     let recommendations = [];
-    testedTracks.forEach(async (t, i) => {
+    for(let i = 0; i < testedTracks.length; i++) {
         let classificationResult = await RecommendationsMachine_nn.run({
             'X': testedTracksFeatures[i],
             'y': '?',
 		    'nn': neuralNetwork
         });
         if(classificationResult['p'] == 1) {
-            recommendations.push(t);
+            recommendations.push(testedTracks[i]);
         }
-    });
+    }
 
     return recommendations;
 }
