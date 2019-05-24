@@ -47,7 +47,12 @@ async function buildPlaylist(req, res){
 				usersController.GetPreferencesNN(user)
 			]);
 	
-			return Recommendations.classifyMultiple(userPreferencesNN, familliarTracks, unfamilliarTracks);
+			try{
+				res.status(200).send(await Recommendations.classifyMultiple(userPreferencesNN, familliarTracks, unfamilliarTracks));
+			}
+			catch{
+				res.status(500).send("Internal server error");
+			}
 		}
 	})
 }
