@@ -137,10 +137,6 @@ async function classifyForRecommendedTracks_id3(familliarTracks, testedTracks) {
 // recommendedTracks returned as the track objects
 // as they are presented as the testedTracks array
 async function classifyForRecommendedTracks_neuralnetwork(neuralNetwork, testedTracks) {
-    if(neuralNetwork === undefined) {
-        return [];
-    }
-
     neuralNetwork = ReformatNeuralNetwork(neuralNetwork);
     let testedTracksFeatures = testedTracks.map((t) => {
         return ReformatAudioFeatures(t);
