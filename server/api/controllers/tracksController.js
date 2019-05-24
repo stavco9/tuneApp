@@ -248,9 +248,10 @@ function LikeTrackById(req, res) {
 					await mongoConnection.updateMongoDB('Tracks', {'id': req.body.trackId}, {unlikes: result[0].unlikes});
 				}
 	
-				const trainedNN = ml.Recommendations.trainNN(user.neuralnetwork, result[0], true);
-				await mongoConnection.updateMongoDB('users', {'email': user.email}, {'likedTracks': likedTracks, 'unlikedTracks': unlikedTracks, 'neuralnetwork': trainedNN});
 				res.status(200).send('Liked track ' + req.body.trackId);
+
+				const trainedNN = await ml.Recommendations.trainNN(user.neuralnetwork, result[0], true);
+				mongoConnection.updateMongoDB('users', {'email': user.email}, {'likedTracks': likedTracks, 'unlikedTracks': unlikedTracks, 'neuralnetwork': trainedNN});
 			}
 		});
 	})
@@ -304,11 +305,12 @@ function UnlikeTrackById(req, res) {
 					result[0].likes--;
 					await mongoConnection.updateMongoDB('Tracks', {'id': req.body.trackId}, {likes: result[0].likes});
 				}
+				
+				res.status(200).send('Unliked track ' + req.body.trackId);
 
 				const trainedNN = await ml.Recommendations.trainNN(user.neuralnetwork, result[0], false);
 
-				await mongoConnection.updateMongoDB('users', {'email': user.email}, {'likedTracks': likedTracks, 'unlikedTracks': unlikedTracks, 'neuralnetwork': trainedNN});
-				res.status(200).send('Unliked track ' + req.body.trackId);
+				mongoConnection.updateMongoDB('users', {'email': user.email}, {'likedTracks': likedTracks, 'unlikedTracks': unlikedTracks, 'neuralnetwork': trainedNN});
 			}
 		});
 	})
@@ -327,22 +329,23 @@ async function GetSimilarTracksById(req, res) {
 		if(user == null) {
 			res.status(401).send('You are unauthorized! Please login!');
 		}
-
-		let trackId = req.params.trackId;
-
-		let baseTrack = await mongoConnection.queryFromMongoDBJoin("Tracks", "AudioFeatures", "id", "id", {"id": trackId});
-	
-		if (baseTrack.length < 1){
-			res.status(404).send("Track " + trackId + " was not found");
-		}
 		else{
-			//userId = user.email;
+			let trackId = req.params.trackId;
 
-			let preferredTracks = await users.GetPreferredTracksByUserId(user, 1000);
-			let unfamilliarTracks = await users.GetUnfamilliarPopularTracksByUserId(user, 1000);
-			let allTestedTracks = [...preferredTracks, ...unfamilliarTracks];
+			let baseTrack = await mongoConnection.queryFromMongoDBJoin("Tracks", "AudioFeatures", "id", "id", {"id": trackId});
 		
-			res.status(200).send(await ml.SimilarTracks.search(baseTrack[0], allTestedTracks));
+			if (baseTrack.length < 1){
+				res.status(404).send("Track " + trackId + " was not found");
+			}
+			else{
+				//userId = user.email;
+	
+				let preferredTracks = await users.GetPreferredTracksByUserId(user, 1000);
+				let unfamilliarTracks = await users.GetUnfamilliarPopularTracksByUserId(user, 1000);
+				let allTestedTracks = [...preferredTracks, ...unfamilliarTracks];
+			
+				res.status(200).send(await ml.SimilarTracks.search(baseTrack[0], allTestedTracks));
+			}
 		}
 	})
 }

@@ -94,9 +94,9 @@ function LikeArtistById(req, res) {
 					await mongoConnection.updateMongoDB('Artists', {'id': req.body.artistId}, {unlikes: result[0].unlikes});
 				}
 
-				await mongoConnection.updateMongoDB('users', {'email': user.email}, {likedArtists: likedArtists, unlikedArtists: unlikedArtists});
-
 				res.status(200).send('Liked artist ' + req.body.artistId);
+
+				mongoConnection.updateMongoDB('users', {'email': user.email}, {likedArtists: likedArtists, unlikedArtists: unlikedArtists});
 			}
 		});
 	})
@@ -150,9 +150,9 @@ function UnlikeArtistById(req, res) {
 					await mongoConnection.updateMongoDB('Artists', {'id': req.body.artistId}, {likes: result[0].likes});
 				}
 
-				await mongoConnection.updateMongoDB('users', {'email': user.email}, {unlikedArtists: unlikedArtists});
-
 				res.status(200).send('unliked artist ' + req.body.artistId);
+
+				mongoConnection.updateMongoDB('users', {'email': user.email}, {likedArtists: likedArtists, unlikedArtists: unlikedArtists});
 			}
 		});
 	})
