@@ -29,6 +29,36 @@ function getDate(){
 	return (date + " " + time)
 }
 
+// another way to merge two arrays, NOT IN USE right now
+/*function randomMergeArrays(array1, array2, chanceTo1 = 0.5, mergedArraySize = 0) {
+	let mergedArray = [];
+	if(mergedArraySize == 0) {
+		mergedArraySize = array1.length + array2.length;
+	}
+
+	[i1, i2] = [0, 0];
+	for(let i=0; i<mergedArraySize; i++) {
+		if((Math.random() <= chanceTo1 && i1 < array1.length) || i2 == array2.length) {
+			mergedArray.push(array1[i1]);
+			i1++;
+		}
+		else {
+			mergedArray.push(array2[i2]);
+			i2++;
+		}
+	}
+
+	return mergedArray;
+}*/
+
+function shuffleArray(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
 async function buildPlaylist(req, res){
 	usersController.userDevMode(req);
 
@@ -46,9 +76,21 @@ async function buildPlaylist(req, res){
 				usersController.GetUnfamilliarPopularTracksByUserId(user),
 				usersController.GetPreferencesNN(user)
 			]);
-	
+
+			let preferredTracks = usersController.GetPreferredTracksUsingFamilliarTracks(familliarTracks);
+			let recommendedTracks = await Recommendations.classifyMultiple(userPreferencesNN, familliarTracks, unfamilliarTracks);
+			
+			const playlistSize = 30;
+			const numOfPreferredTracksInPlaylist = Math.min(10, preferredTracks.length);
+
+			preferredTracks = preferredTracks.slice(0, numOfPreferredTracksInPlaylist);
+			recommendedTracks = recommendedTracks.slice(0, playlistSize - numOfPreferredTracksInPlaylist);
+
+			let playlist = [...preferredTracks, ...recommendedTracks];
+			playlist = shuffleArray(playlist);
+
 			try{
-				res.status(200).send(await Recommendations.classifyMultiple(userPreferencesNN, familliarTracks, unfamilliarTracks));
+				res.status(200).send(playlist);
 			}
 			catch{
 				res.status(500).send("Internal server error");

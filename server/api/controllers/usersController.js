@@ -113,8 +113,24 @@ async function GetFamilliarTracksByUserId(user, numOfActivities=300) {
 //     }
 // ]
 async function GetPreferredTracksByUserId(user, numOfActivities=300) {
-    return ((await GetFamilliarTracksByUserId(user, numOfActivities))
-        .filter(t => t.scoreForUser > 0));
+    return (GetPreferredTracksUsingFamilliarTracks(
+        await GetFamilliarTracksByUserId(user, numOfActivities)
+    ));
+}
+
+// =====   out:   =====
+// [
+//     {
+//         id (of track)
+//         name
+//         AudioFeatures: {
+//             ...
+//         }
+//         ...
+//     }
+// ]
+function GetPreferredTracksUsingFamilliarTracks(familliarTracks) {
+    return (familliarTracks.filter(t => t.scoreForUser > 0));
 }
 
 // =====   out:   =====
@@ -217,6 +233,7 @@ module.exports = {
     GetFamilliarTracksByUserId: GetFamilliarTracksByUserId,
     GetUnfamilliarPopularTracksByUserId: GetUnfamilliarPopularTracksByUserId,
     GetPreferredTracksByUserId: GetPreferredTracksByUserId,
+    GetPreferredTracksUsingFamilliarTracks: GetPreferredTracksUsingFamilliarTracks,
     GetUserIdFromReq: GetUserIdFromReq,
     GetPreferencesNN: GetPreferencesNN,
     GetUserInfo: GetUserInfo,
