@@ -42,28 +42,45 @@ const StyledAppHeader = styled(Text)`
 
 const LoginPage = props => {
 
-    if (props.user.email === undefined) {
+    if (props.user.user === undefined || props.user.user.email === undefined) {
         GoogleSignin.signInSilently().then(user => {
             if (user) {
                 console.log(user);
 
-                /*axios.post('http://tuneapp-server-1969202483.us-east-1.elb.amazonaws.com/users/userexist', user).then(response => {
+                axios.post('http://tuneapp-server-1969202483.us-east-1.elb.amazonaws.com/users/userexist', {
+                    user: {
+                        email: user.email
+                    }
+                }).then(response => {
                    if (response) {
                        props.login(user);
                    }
-                });*/
+                });
             }
         }).catch(err => {
             console.log(err);
         });
     }
 
+
+
+
     const signIn = async () => {
         try {
             await GoogleSignin.hasPlayServices();
             const {user} = await GoogleSignin.signIn();
             if (user) {
-                //axios.post('http://tuneapp-server-1969202483.us-east-1.elb.amazonaws.com/users/Register', user);
+                axios.post('http://tuneapp-server-1969202483.us-east-1.elb.amazonaws.com/users/Register', {
+                    user: {
+                        email: user.email
+                    }}).then(response => {
+                    console.log(response);
+                    axios.post('http://tuneapp-server-1969202483.us-east-1.elb.amazonaws.com/users/userexist', {
+                        user: {
+                            email: user.email
+                        }
+                    });
+                });
                 props.login(user);
             }
         } catch (error) {
