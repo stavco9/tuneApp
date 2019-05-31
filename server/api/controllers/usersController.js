@@ -146,9 +146,43 @@ function GetPreferredTracksUsingFamilliarTracks(familliarTracks) {
 // ]
 async function GetUnfamilliarPopularTracksByUserId(user, numOfActivities=1000) {
     let familliar = await GetFamilliarTracksByUserId(user, numOfActivities);
-    let popular = await mongoConnection.queryFromMongoDBJoinSort('Tracks', 'AudioFeatures', 'id', 'id', {}, familliar.length + 100, {'popularity': -1});
+    let likedByArtists = await GetTracksByLikedArtists(user, familliar.length + 100);
+    //let likedByArtists = [];
     
+    let popular = [];
+
+    if (likedByArtists.length < familliar.length + 100){
+        popular = await mongoConnection.queryFromMongoDBJoinSort('Tracks', 'AudioFeatures', 'id', 'id', {}, familliar.length + 100 - likedByArtists.length , {'popularity': -1});
+    }    
+
+    popular = popular.concat(likedByArtists);
+
     return popular.filter((p) => !familliar.some((f) => p.id == f.id));
+}
+
+async function GetTracksByLikedArtists(user, numOfTracks=1000){
+
+    let allTracks = [];
+
+    if (user.hasOwnProperty('likedArtists')){
+        
+        for(let i = 0; i < user.likedArtists.length; i++) {
+
+            let tracksOfCurrArtist = await mongoConnection.queryFromMongoDBJoin("Tracks", "AudioFeatures", "id", "id", {
+                'artists': { 
+                    $elemMatch: { 
+                        'id': user.likedArtists[i]
+                    } 
+                }
+            }, numOfTracks)
+    
+            allTracks = allTracks.concat(tracksOfCurrArtist);
+        };
+
+        allTracks = allTracks.sort((a, b) => b.popularity - a.popularity);
+    }
+
+    return allTracks;
 }
 
 async function GetPreferencesNN(user) {
@@ -235,6 +269,7 @@ module.exports = {
     GetPreferredTracksByUserId: GetPreferredTracksByUserId,
     GetPreferredTracksUsingFamilliarTracks: GetPreferredTracksUsingFamilliarTracks,
     GetUserIdFromReq: GetUserIdFromReq,
+    GetTracksByLikedArtists: GetTracksByLikedArtists,
     GetPreferencesNN: GetPreferencesNN,
     GetUserInfo: GetUserInfo,
     userDevMode: userDevMode,

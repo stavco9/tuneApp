@@ -71,6 +71,8 @@ async function buildPlaylist(req, res){
 		else{
 			userId = user.email;
 	
+			//let test = await usersController.GetTracksByLikedArtists(user);
+
 			let [familliarTracks, unfamilliarTracks, userPreferencesNN] = await Promise.all([
 				usersController.GetFamilliarTracksByUserId(user),
 				usersController.GetUnfamilliarPopularTracksByUserId(user),
