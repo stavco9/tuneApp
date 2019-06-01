@@ -40,30 +40,33 @@ const StyledAppHeader = styled(Text)`
     text-align: center;
 `;
 
-const LoginPage = props => {
+const loginToServer = (props, user) => {
+    axios.post('http://tuneapp-server-1969202483.us-east-1.elb.amazonaws.com/users/userexist', {
+        user: {
+            email: user.email
+        }
+    }).then(() => axios.get('http://tuneapp-server-1969202483.us-east-1.elb.amazonaws.com/users/my/')
+        .then(response => {
+            console.log(response);
 
+            // Full user data, including name and liked/unliked tracks and artists
+            props.login({...user, ...response.data});
+        }))
+};
+
+const LoginPage = props => {
     if (props.user.user === undefined || props.user.user.email === undefined) {
         GoogleSignin.signInSilently().then(user => {
-            if (user) {
-                console.log(user);
+            const realUser = user.user;
+            if (realUser) {
+                console.log(realUser);
 
-                axios.post('http://tuneapp-server-1969202483.us-east-1.elb.amazonaws.com/users/userexist', {
-                    user: {
-                        email: user.email
-                    }
-                }).then(response => {
-                   if (response) {
-                       props.login(user);
-                   }
-                });
+                loginToServer(props, realUser);
             }
         }).catch(err => {
             console.log(err);
         });
     }
-
-
-
 
     const signIn = async () => {
         try {
@@ -73,17 +76,14 @@ const LoginPage = props => {
                 axios.post('http://tuneapp-server-1969202483.us-east-1.elb.amazonaws.com/users/Register', {
                     user: {
                         email: user.email
-                    }}).then(response => {
+                    }
+                }).then(response => {
                     console.log(response);
-                    axios.post('http://tuneapp-server-1969202483.us-east-1.elb.amazonaws.com/users/userexist', {
-                        user: {
-                            email: user.email
-                        }
-                    });
+                    loginToServer(props, user);
                 });
-                props.login(user);
             }
         } catch (error) {
+            console.log(error);
         }
     };
     return (
