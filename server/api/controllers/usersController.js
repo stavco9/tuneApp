@@ -156,9 +156,19 @@ async function GetUnfamilliarPopularTracksByUserId(user, numOfActivities=1000) {
     }    
 
     popular = popular.concat(likedByArtists);
+    
+    popular = popular.sort((a, b) => b.popularity - a.popularity);
+
+    popular = arrayUnique(popular);  
 
     return popular.filter((p) => !familliar.some((f) => p.id == f.id));
 }
+
+var arrayUnique = function (arr) {
+	return arr.filter(function(item, index){
+		return arr.indexOf(item) >= index;
+	});
+};
 
 async function GetTracksByLikedArtists(user, numOfTracks=1000){
 
