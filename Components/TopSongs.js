@@ -1,10 +1,10 @@
 import React, {useEffect, useState} from "react";
 import styled from 'styled-components';
 import {Image} from 'react-native';
-import {Body, Button, Card, CardItem, Icon, Right, Text, View} from 'native-base';
+import {Body, Button, Card, CardItem, Icon, Left, Right, Text, View} from 'native-base';
 import axios from 'axios';
 import {connect} from "react-redux";
-import {Login} from "../redux/actions/login-actions";
+import {LikeSong, UnlikeSong, RemoveLikeSong, RemoveUnlikeSong} from '../redux/actions/like-actions';
 
 const StyledTopSongsContainer = styled(View)`
     display: flex;
@@ -19,59 +19,65 @@ const StyledSongCard = styled(Card)`
     height: 230px;
 `;
 
-const mapStateToProps = state => {
-    return {
-        user: state.login
-    }
-};
-
-const mapDispatchToProps = dispatch => {
-    return {
-        login: user => {
-            dispatch(Login(user));
-        },
-    }
-};
-
 const TopSongs = props => {
     const [songs, setSongs] = useState([]);
 
     useEffect(() => {
-        fetch('http://tuneapp-server-1969202483.us-east-1.elb.amazonaws.com/tracks/top/3')
-        //fetch('http://tuneapp-server-1969202483.us-east-1.elb.amazonaws.com/tracks/similar/1GLmaPfulP0BrfijohQpN5')
-            .then(response => response.json())
-            .then(data => {
-                setSongs(data);
-            });
+        if (props.isUserLikedTracksLoaded) {
+            fetch('http://tuneapp-server-1969202483.us-east-1.elb.amazonaws.com/tracks/top/30')
+                .then(response => response.json())
+                .then(fetchedSongs => {
+                    setSongs(fetchedSongs.map(song => {
+                        return {
+                            ...song,
+                            liked: props.likeReducer.likedTracks.includes(song.id),
+                            unliked: props.likeReducer.unlikedTracks.includes(song.id)
+                        }
+                    }));
+                });
+        }
+    }, [props.isUserLikedTracksLoaded]);
 
-    }, []);
+    const toggleLikeSong = songId => {
+        const updatedSongs = [...songs];
+        const songIndex = updatedSongs.findIndex(songItem => {
+            return songItem.id === songId
+        });
+        updatedSongs[songIndex].liked = !updatedSongs[songIndex].liked;
+        updatedSongs[songIndex].unliked = false;
+        setSongs(updatedSongs);
+    };
 
-    const likeSong = (song) => {
-        const likeRequest = { trackId: song.id, absolutely: !props.user.likedTracks.includes(song.id) };
-        axios.post('http://tuneapp-server-1969202483.us-east-1.elb.amazonaws.com/tracks/like', likeRequest).then(response => {
+    const toggleUnlikeSong = songId => {
+        const updatedSongs = [...songs];
+        const songIndex = updatedSongs.findIndex(songItem => {
+            return songItem.id === songId
+        });
+        updatedSongs[songIndex].unliked = !updatedSongs[songIndex].unliked;
+        updatedSongs[songIndex].liked = false;
+        setSongs(updatedSongs);
+    };
+
+    const likeSong = song => {
+        const likeRequest = {trackId: song.id, absolutely: !song.liked};
+        const likeUrl = 'http://tuneapp-server-1969202483.us-east-1.elb.amazonaws.com/tracks/'.concat(song.liked ? 'unlike' : 'like');
+
+        axios.post(likeUrl, likeRequest).then(response => {
             if (response) {
-                if (likeRequest.absolutely) {
-                    props.user.likedTracks.push(song.id);
-                }
-                else {
-                    props.user.likedTracks = props.user.likedTracks.filter(item => item !== song.id);
-                }
-                props.login(props.user);
+                song.liked ? props.removeLikeSong(song.id) : props.likeSong(song.id);
+                toggleLikeSong(song.id);
             }
         });
     };
 
     const unlikeSong = (song) => {
-        const unlikeRequest = { trackId: song.id, absolutely: !props.user.unlikedTracks.includes(song.id) };
-        axios.post('http://tuneapp-server-1969202483.us-east-1.elb.amazonaws.com/tracks/unlike', unlikeRequest).then(response => {
+        const likeRequest = {trackId: song.id, absolutely: !song.unliked};
+        const likeUrl = 'http://tuneapp-server-1969202483.us-east-1.elb.amazonaws.com/tracks/'.concat(song.unliked ? 'like' : 'unlike');
+
+        axios.post(likeUrl, likeRequest).then(response => {
             if (response) {
-                if (unlikeRequest.absolutely) {
-                    props.user.unlikedTracks.push(song.id);
-                }
-                else {
-                    props.user.unlikedTracks = props.user.unlikedTracks.filter(item => item !== song.id);
-                }
-                props.login(props.user);
+                song.unliked ? props.removeLikeSong(song.id) : props.unlikeSong(song.id);
+                toggleUnlikeSong(song.id);
             }
         });
     };
@@ -80,9 +86,6 @@ const TopSongs = props => {
         <StyledTopSongsContainer>
             {
                 songs.map(song => {
-                    const isLiked = props.user.likedTracks.includes(song.id);
-                    const isUnliked = props.user.unlikedTracks.includes(song.id);
-
                         return (
                             <StyledSongCard key={song.id}>
                                 <Image source={{uri: song.album.images[0].url}} style={{width: '100%', flex: 1}}/>
@@ -92,12 +95,19 @@ const TopSongs = props => {
                                         <Text note>{song.artists[0].name}.</Text>
                                     </Body>
                                     <Right>
-                                        <Button rounded transparent={isLiked} onPress={() => likeSong(song)}>
-                                            <Icon active name="thumbs-up"/>
-                                        </Button>
-                                        <Button rounded transparent={isUnliked} onPress={() => unlikeSong(song)}>
-                                            <Icon active name="thumbs-down"/>
-                                        </Button>
+                                        <CardItem style={{paddingLeft: '30%', paddingRight: 0}}>
+                                            <Body>
+                                                <Button small rounded bordered={!song.liked} onPress={() => likeSong(song)}>
+                                                    <Icon active name="thumbs-up"/>
+                                                </Button>
+                                            </Body>
+                                            <Right>
+                                                <Button small rounded bordered={!song.unliked}
+                                                        onPress={() => unlikeSong(song)}>
+                                                    <Icon active name="thumbs-down"/>
+                                                </Button>
+                                            </Right>
+                                        </CardItem>
                                     </Right>
                                 </CardItem>
                             </StyledSongCard>
@@ -107,6 +117,29 @@ const TopSongs = props => {
             }
         </StyledTopSongsContainer>
     )
+};
+
+const mapStateToProps = state => {
+    return {
+        likeReducer: state.likeReducer
+    }
+};
+
+const mapDispatchToProps = dispatch => {
+    return {
+        likeSong: songId => {
+            dispatch(LikeSong(songId));
+        },
+        unlikeSong: songId => {
+            dispatch(UnlikeSong(songId));
+        },
+        removeLikeSong: songId => {
+            dispatch(RemoveLikeSong(songId));
+        },
+        removeUnlikeSong: songId => {
+            dispatch(RemoveUnlikeSong(songId));
+        },
+    }
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(TopSongs);

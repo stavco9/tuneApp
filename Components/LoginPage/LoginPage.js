@@ -40,33 +40,24 @@ const StyledAppHeader = styled(Text)`
     text-align: center;
 `;
 
-const loginToServer = (props, user) => {
-    axios.post('http://tuneapp-server-1969202483.us-east-1.elb.amazonaws.com/users/userexist', {
-        user: {
-            email: user.email
-        }
-    }).then(() => axios.get('http://tuneapp-server-1969202483.us-east-1.elb.amazonaws.com/users/my/')
-        .then(response => {
-            console.log(response);
-
-            // Full user data, including name and liked/unliked tracks and artists
-            props.login({...user, ...response.data});
-        }))
-};
-
 const LoginPage = props => {
-    if (props.user.user === undefined || props.user.user.email === undefined) {
-        GoogleSignin.signInSilently().then(user => {
-            const realUser = user.user;
-            if (realUser) {
-                console.log(realUser);
-
-                loginToServer(props, realUser);
+    if (props.user || props.user.email) {
+        GoogleSignin.signInSilently().then(({user}) => {
+            if (user) {
+                loginToServer(user);
             }
         }).catch(err => {
             console.log(err);
         });
     }
+
+    const loginToServer = user => {
+        axios.post('http://tuneapp-server-1969202483.us-east-1.elb.amazonaws.com/users/userexist', {
+            user: {
+                email: user.email
+            }
+        }).then(() =>  props.login(user));
+    };
 
     const signIn = async () => {
         try {
