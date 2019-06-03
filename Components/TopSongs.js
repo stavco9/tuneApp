@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from "react";
 import styled from 'styled-components';
 import {Image} from 'react-native';
-import {Body, Button, Card, CardItem, Icon, Left, Right, Text, View} from 'native-base';
+import {Body, Button, Card, CardItem, Icon, Right, Text, View} from 'native-base';
 import axios from 'axios';
 import {connect} from "react-redux";
 import {LikeSong, UnlikeSong, RemoveLikeSong, RemoveUnlikeSong} from '../redux/actions/like-actions';
