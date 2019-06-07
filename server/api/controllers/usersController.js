@@ -1,4 +1,5 @@
 const mongoConnection = require('../../mongo-connection');
+const {randomMergeArrays} = require('../models/helperFunctions');
 
 function GetUserIdFromReq(req) {
     return req && req.session && req.session.token && req.session.token.email;
@@ -144,24 +145,15 @@ function GetPreferredTracksUsingFamilliarTracks(familliarTracks) {
 //         ...
 //     }
 // ]
-async function GetUnfamilliarPopularTracksByUserId(user, numOfActivities=1000) {
+async function GetUnfamilliarPopularTracksByUserId(user, numOfActivities=1000, numOfTracks=100) {
     let familliar = await GetFamilliarTracksByUserId(user, numOfActivities);
-    let likedByArtists = await GetTracksByLikedArtists(user, familliar.length + 100);
-    //let likedByArtists = [];
-    
-    let popular = [];
+    [popularWorldwide, popolarOfLikedArtists] = await Promise.all([
+        mongoConnection.queryFromMongoDBJoinSort('Tracks', 'AudioFeatures', 'id', 'id', {}, familliar.length + numOfTracks, {'popularity': -1}),
+        GetTracksByLikedArtists(user, familliar.length + numOfTracks)
+    ]);
 
-    if (likedByArtists.length < familliar.length + 100){
-        popular = await mongoConnection.queryFromMongoDBJoinSort('Tracks', 'AudioFeatures', 'id', 'id', {}, familliar.length + 100 - likedByArtists.length , {'popularity': -1});
-    }    
-
-    popular = popular.concat(likedByArtists);
-    
-    popular = popular.sort((a, b) => b.popularity - a.popularity);
-
-    popular = arrayUnique(popular);  
-
-    return popular.filter((p) => !familliar.some((f) => p.id == f.id));
+    let popular = randomMergeArrays(popularWorldwide, popolarOfLikedArtists);
+    return arrayUnique(popular).filter((p) => !familliar.some((f) => p.id == f.id)).slice(0, numOfTracks);
 }
 
 var arrayUnique = function (arr) {
@@ -171,28 +163,19 @@ var arrayUnique = function (arr) {
 };
 
 async function GetTracksByLikedArtists(user, numOfTracks=1000){
-
-    let allTracks = [];
-
-    if (user.hasOwnProperty('likedArtists')){
-        
-        for(let i = 0; i < user.likedArtists.length; i++) {
-
-            let tracksOfCurrArtist = await mongoConnection.queryFromMongoDBJoin("Tracks", "AudioFeatures", "id", "id", {
-                'artists': { 
-                    $elemMatch: { 
-                        'id': user.likedArtists[i]
-                    } 
+    if (user.hasOwnProperty('likedArtists') && user.likedArtists.length > 0){
+        return await mongoConnection.queryFromMongoDBJoinSort("Tracks", "AudioFeatures", "id", "id", {
+                'artists': {
+                    $elemMatch: {
+                        'id': {
+                            $in: user.likedArtists
+                        }
+                    }
                 }
-            }, numOfTracks)
-    
-            allTracks = allTracks.concat(tracksOfCurrArtist);
-        };
-
-        allTracks = allTracks.sort((a, b) => b.popularity - a.popularity);
+            }, numOfTracks, {'popularity': -1});
     }
 
-    return allTracks;
+    return [];
 }
 
 async function GetPreferencesNN(user) {
