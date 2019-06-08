@@ -99,18 +99,23 @@ async function classifyForRecommendedTracks_id3(familliarTracks, testedTracks) {
     let familliarTracksFeatures = familliarTracks.map((t) => {
         return ReformatAudioFeatures(t);
     });
+    let familliarTracksClassifications = familliarTracks.map((t) => {
+        return ReformatClassification(t);
+    });
     let testedTracksFeatures = testedTracks.map((t) => {
         return ReformatAudioFeatures(t);
     });
 
+    let classificationResult = await RecommendationsMachine_id3.run({
+        'X': familliarTracksFeatures,
+        'y': familliarTracksClassifications,
+        'T': testedTracksFeatures
+    });
+
     let recommendations = [];
-    testedTracks.forEach(async (t, i) => {
-        let isRecommended = await RecommendationsMachine_id3.run({
-            'y': testedTracksFeatures[i],
-		    'X': familliarTracksFeatures
-        });
-        if(isRecommended) {
-            recommendations.push(t);
+    classificationResult.forEach((r, i) => {
+        if(r === 1) {
+            recommendations.push(testedTracks[i]);
         }
     });
 
@@ -211,13 +216,13 @@ async function classifyForRecommendedTracks_all(neuralNetwork, familliarTracks, 
 {
     let results = await Promise.all([
         classifyForRecommendedTracks_knn(familliarTracks, testedTracks),
-        //classifyForRecommendedTracks_id3(familliarTracks, testedTracks),
+        classifyForRecommendedTracks_id3(familliarTracks, testedTracks),
         classifyForRecommendedTracks_neuralnetwork(neuralNetwork, testedTracks)
     ]);
 
     results.forEach((arrOfRecommendedTracks) => {
         arrOfRecommendedTracks.forEach((r) => {
-            let track = testedTracks.find((t) => t.id === r.id)
+            let track = testedTracks.find((t) => t.id === r.id);
             if(track.recommendationsCounter === undefined) {
                 track.recommendationsCounter = 0;
             }

@@ -153,7 +153,10 @@ async function GetUnfamilliarPopularTracksByUserId(user, numOfActivities=1000, n
     ]);
 
     let popular = randomMergeArrays(popularWorldwide, popolarOfLikedArtists);
-    return arrayUnique(popular).filter((p) => !familliar.some((f) => p.id == f.id)).slice(0, numOfTracks);
+    return popular.filter((p,p_i) => {
+            return (popular.findIndex(f => f.id === p.id) === p_i) &&
+                   (!familliar.some(f => p.id == f.id))
+        }).slice(0, numOfTracks);
 }
 
 var arrayUnique = function (arr) {
