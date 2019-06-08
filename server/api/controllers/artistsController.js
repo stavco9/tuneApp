@@ -162,6 +162,13 @@ function UnlikeArtistById(req, res) {
 	})
 }
 
+async function GetArtistsByName(req, res){
+
+	var artistResult = await mongoConnection.queryFromMongoDB("Artists", {"name": new RegExp(req.params.artistName, "i")});
+
+	res.status(200).send(artistResult);
+}
+
 // artists/top/artistId
 async function GetTopArtists(req, res) {
 	let limit = 10;
@@ -183,5 +190,6 @@ module.exports = {
 	DeleteArtistById: DeleteArtistById,
 	LikeArtistById: LikeArtistById,
 	UnlikeArtistById: UnlikeArtistById,
+	GetArtistsByName, GetArtistsByName,
 	GetTopArtists: GetTopArtists
 };

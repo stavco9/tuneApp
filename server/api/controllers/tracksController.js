@@ -353,6 +353,13 @@ async function GetSimilarTracksById(req, res) {
 	})
 }
 
+async function GetTrackByName(req, res){
+
+	var trackResult = await mongoConnection.queryFromMongoDB("Tracks", {"name": new RegExp(req.params.trackName, "i")});
+
+	res.status(200).send(trackResult);
+}
+
 // tracks/top/trackId
 async function GetTopTracks(req, res) {
 	let limit = 10;
@@ -390,6 +397,7 @@ module.exports = {
 	AddNewAudioFeature: AddNewAudioFeature,
 	LikeTrackById: LikeTrackById,
 	UnlikeTrackById: UnlikeTrackById,
-    GetSimilarTracksById: GetSimilarTracksById,
+	GetSimilarTracksById: GetSimilarTracksById,
+	GetTrackByName, GetTrackByName,
 	GetTopTracks: GetTopTracks
 };

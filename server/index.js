@@ -107,7 +107,7 @@ app.get('/home', async(req, res) => {
     }
 });
 
-/*
+
 app.get('/login/google', (req, res) => {
     res.statusCode = 200;
 
@@ -120,7 +120,7 @@ app.get('/login/google', (req, res) => {
         return res.redirect(googleUrl);
     }
 });
-*/
+
 
 app.get('/login/spotify', (req, res) => {
     res.statusCode = 200;

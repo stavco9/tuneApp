@@ -47,6 +47,10 @@ module.exports = function(app) {
     .get(tracksController.GetTrackById)
     .put(tracksController.UpdateTrackById)
     .delete(tracksController.DeleteTrackById);
+
+  app.route('/tracks/find/:trackName').get(async function(req, res){
+    await tracksController.GetTrackByName(req, res);
+  });
     
   // Body format for POST request
   //{
