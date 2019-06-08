@@ -343,9 +343,13 @@ async function GetSimilarTracksById(req, res) {
 			else{
 				//userId = user.email;
 	
-				let preferredTracks = await users.GetPreferredTracksByUserId(user, 1000);
-				let unfamilliarTracks = await users.GetUnfamilliarPopularTracksByUserId(user, 1000);
+				let [preferredTracks, unfamilliarTracks] = await Promise.all([
+					users.GetPreferredTracksByUserId(user, 1000),
+					users.GetUnfamilliarPopularTracksByUserId(user, 1000)
+				]);
+				
 				let allTestedTracks = [...preferredTracks, ...unfamilliarTracks];
+				allTestedTracks = allTestedTracks.filter(t => t.id !== trackId);
 			
 				res.status(200).send(await ml.SimilarTracks.search(baseTrack[0], allTestedTracks));
 			}
