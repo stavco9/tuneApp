@@ -1,11 +1,12 @@
-import React, {Component,} from "react";
+import React, {useEffect} from "react";
 import styled from "styled-components";
-import {Text} from 'react-native';
+import {View} from 'react-native';
 import {Container, Drawer} from 'native-base';
 import AppHeader from "./AppHeader/AppHeader";
 import AppContent from "./AppContent/AppContent";
 import SideBar from "./SideBar/SideBar"
-import TopSongs from "../TopSongs";
+import Player from "../Player/Player";
+import TrackPlayer from "react-native-track-player";
 
 
 const StyledShellPage = styled(Container)`
@@ -14,26 +15,38 @@ const StyledShellPage = styled(Container)`
     height: 100%;
 `;
 
-export default class Shell extends Component<Props> {
+const Shell = props => {
+    let drawer;
 
-    closeDrawer = () => {
-        this.drawer._root.close()
+    const initPlayer = async () => {
+        await TrackPlayer.setupPlayer();
     };
 
-    openDrawer = () => {
-        this.drawer._root.open()
+    useEffect(() => {
+        initPlayer();
+    }, []);
+
+    const closeDrawer = () => {
+        drawer._root.close()
     };
 
-    render() {
-        return (
-            <Drawer content={<SideBar/>} ref={(ref) => {
-                this.drawer = ref;
-            }} onClose={() => this.closeDrawer()}>
-                <StyledShellPage>
-                    <AppHeader drawer={this.openDrawer}/>
-                    <AppContent/>
-                </StyledShellPage>
-            </Drawer>
-        );
-    }
-}
+    const openDrawer = () => {
+        drawer._root.open()
+    };
+
+    return (
+        <Drawer content={<SideBar/>} ref={(ref) => {
+            drawer = ref;
+        }} onClose={() => closeDrawer()}>
+            <StyledShellPage>
+                <AppHeader drawer={openDrawer}/>
+                <AppContent/>
+                <View style={{position: 'relative', left: 0, right: 0, bottom: -10}}>
+                    <Player/>
+                </View>
+            </StyledShellPage>
+        </Drawer>
+    );
+};
+
+export default Shell;

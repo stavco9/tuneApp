@@ -11,6 +11,7 @@ const StyledContent = styled(Content)`
 `;
 
 export default class AppContent extends Component<Props> {
+
     render() {
         return (
             <StyledContent>
