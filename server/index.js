@@ -20,6 +20,12 @@ const spotifyStateKey = 'spotify_auth_state';
 
 const app = express();
 
+app.use(function(req, res, next) {
+    res.header("Access-Control-Allow-Origin", "null");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    next();
+});
+
 // Registering the artist routes
 const artistRoutes = require('./api/routes/artistsRoutes');
 artistRoutes(app);
