@@ -1,77 +1,57 @@
-import React, {useEffect, useState} from "react";
+import React, {useEffect} from "react";
 import styled from 'styled-components';
-import {Image, TouchableOpacity} from 'react-native';
-import {Body, Button, Card, CardItem, Icon, Right, Text, View} from 'native-base';
+import {View} from 'native-base';
+import axios from 'axios';
 import {connect} from "react-redux";
-import {playSongs} from "../redux/actions/player-actions";
+import {SetTopSongs} from "../redux/actions/songs-actions";
+import SongCard from './SongCardList/SongCard';
+import SongItem from "./common/SongItem";
 
 const StyledTopSongsContainer = styled(View)`
     display: flex;
-    background-color: #9FA8DA;
+    background-color: #C5CAE9;
     flex-flow: row wrap;
-    justify-content:space-evenly;
-    align-items:center;
-`;
-
-const StyledSongCard = styled(Card)`
-    width: 96%;
-    height: 230px;
+    flex: 1;
+    width: 100%;
+    justify-content: space-evenly;
+    align-items: center;
 `;
 
 const TopSongs = props => {
-
-    const [songs, setSongs] = useState([]);
-
     useEffect(() => {
-        fetch('http://tuneapp-server-1969202483.us-east-1.elb.amazonaws.com/tracks/top/20')
-        //fetch('http://tuneapp-server-1969202483.us-east-1.elb.amazonaws.com/tracks/similar/1GLmaPfulP0BrfijohQpN5')
-            .then(response => response.json())
-            .then(data => {
-                setSongs(data);
-            });
-
-    }, []);
+        if (props.isUserLikedTracksLoaded && !props.songReducer.topSongs.length) {
+            axios.get('http://tuneapp-server-1969202483.us-east-1.elb.amazonaws.com/tracks/top/30')
+                .then(({data: fetchedSongs}) => {
+                    props.setTopSongs([...fetchedSongs]);
+                });
+        }
+    }, [props.isUserLikedTracksLoaded]);
 
     return (
         <StyledTopSongsContainer>
             {
-                songs.map(song =>
-                    (
-                        <StyledSongCard key={song.id}>
-                            <TouchableOpacity onPress={() => props.playSongs(song, songs)} style={{width: '100%', flex: 1}}>
-                                <Image source={{uri: song.album.images[0].url}} style={{width: '100%', flex: 1}}/>
-                            </TouchableOpacity>
-                            <CardItem footer>
-                                <Body>
-                                    <Text>{song.name}</Text>
-                                    <Text note>{song.artists[0].name}.</Text>
-                                </Body>
-                                <Right>
-                                    <Button transparent>
-                                        <Icon active name="thumbs-up"/>
-                                        <Text>{song.popularity} Likes</Text>
-                                    </Button>
-                                </Right>
-                            </CardItem>
-                        </StyledSongCard>
-                    )
-                )
+                props.songReducer.topSongs.map(song => {
+                    const playlistContext = props.songReducer.topSongs.slice(props.songReducer.topSongs.indexOf(song));
+                    const SongCardItem = SongItem(SongCard, song, playlistContext);
+                    return <SongCardItem key={song.id}/>
+                })
             }
         </StyledTopSongsContainer>
     )
 };
 
 const mapStateToProps = state => {
+    console.log(state);
     return {
-        player: state.playerReducer
+        songReducer: state.songReducer
     }
 };
 
 const mapDispatchToProps = dispatch => {
     return {
-        playSongs: (clickedSong, songsList) => {
-            dispatch(playSongs(songsList.slice(songsList.indexOf(clickedSong)), clickedSong));
-        },
+        setTopSongs: topSongs => {
+            dispatch(SetTopSongs(topSongs));
+        }
     }
 };
 
