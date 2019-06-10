@@ -1,10 +1,7 @@
 import React, {Component} from "react";
 import {Container, ListItem, Text, List} from "native-base";
-import {Route, Link} from "react-router-native";
-import TopSongs from "../../TopSongs";
+import {Link} from "react-router-native";
 import styled from "styled-components";
-
-const routes = ["Home", "Chat", "Profile"];
 
 const StyledSideBarContainer = styled(Container)`
     display: flex;
@@ -41,8 +38,13 @@ export default class SideBar extends Component<Props> {
                         </StyledSideBarLink>
                     </StyledSideBarListItem>
                     <StyledSideBarListItem itemDivider>
-                        <StyledSideBarLink to="/home/emptyTest" underlayColor="#f0f4f7">
-                            <StyledSideBarText>Empty Test</StyledSideBarText>
+                        <StyledSideBarLink to="/home/userPlaylist" underlayColor="#f0f4f7">
+                            <StyledSideBarText>User Playlist</StyledSideBarText>
+                        </StyledSideBarLink>
+                    </StyledSideBarListItem>
+                    <StyledSideBarListItem itemDivider>
+                        <StyledSideBarLink to="/home/search" underlayColor="#f0f4f7">
+                            <StyledSideBarText>Search</StyledSideBarText>
                         </StyledSideBarLink>
                     </StyledSideBarListItem>
                 </List>

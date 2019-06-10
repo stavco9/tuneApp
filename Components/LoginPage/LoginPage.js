@@ -41,29 +41,23 @@ const StyledAppHeader = styled(Text)`
 `;
 
 const LoginPage = props => {
-
-    if (props.user.user === undefined || props.user.user.email === undefined) {
-        GoogleSignin.signInSilently().then(user => {
+    if (props.user || props.user.email) {
+        GoogleSignin.signInSilently().then(({user}) => {
             if (user) {
-                console.log(user);
-
-                axios.post('http://tuneapp-server-1969202483.us-east-1.elb.amazonaws.com/users/userexist', {
-                    user: {
-                        email: user.email
-                    }
-                }).then(response => {
-                   if (response) {
-                       props.login(user);
-                   }
-                });
+                loginToServer(user);
             }
         }).catch(err => {
             console.log(err);
         });
     }
 
-
-
+    const loginToServer = user => {
+        axios.post('http://tuneapp-server-1969202483.us-east-1.elb.amazonaws.com/users/userexist', {
+            user: {
+                email: user.email
+            }
+        }).then(() =>  props.login(user));
+    };
 
     const signIn = async () => {
         try {
@@ -73,17 +67,14 @@ const LoginPage = props => {
                 axios.post('http://tuneapp-server-1969202483.us-east-1.elb.amazonaws.com/users/Register', {
                     user: {
                         email: user.email
-                    }}).then(response => {
+                    }
+                }).then(response => {
                     console.log(response);
-                    axios.post('http://tuneapp-server-1969202483.us-east-1.elb.amazonaws.com/users/userexist', {
-                        user: {
-                            email: user.email
-                        }
-                    });
+                    loginToServer(props, user);
                 });
-                props.login(user);
             }
         } catch (error) {
+            console.log(error);
         }
     };
     return (

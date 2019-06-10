@@ -10,6 +10,7 @@ import TrackPlayer from "react-native-track-player";
 
 
 const StyledShellPage = styled(Container)`
+    background-color: #C5CAE9;
     display: flex;
     width: 100%;
     height: 100%;
