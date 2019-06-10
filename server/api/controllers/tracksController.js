@@ -345,7 +345,7 @@ async function GetSimilarTracksById(req, res) {
 	
 				let [preferredTracks, unfamilliarTracks] = await Promise.all([
 					users.GetPreferredTracksByUserId(user, 1000),
-					users.GetUnfamilliarPopularTracksByUserId(user, 1000, 500)
+					users.GetUnfamilliarPopularTracksByUserId(user, 1000)
 				]);
 				
 				let allTestedTracks = [...preferredTracks, ...unfamilliarTracks];

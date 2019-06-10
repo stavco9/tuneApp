@@ -98,7 +98,7 @@ async function listenPlaylist(req, res){
 				res.status(404).send("Track " + trackId + " not found");
 			}
 			else{
-				var listeningPercent = (durationOfListening * 100 / trackFromDB[0].duration_ms);
+				var listeningPercent = (durationOfListening * 100 / 30000);//trackFromDB[0].duration_ms);
 
 				var score = (listeningPercent - 50) / 10;
 
