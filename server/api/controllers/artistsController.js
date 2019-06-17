@@ -1,7 +1,64 @@
 //'use strict';
 
 const mongoConnection = require('../../mongo-connection');
+const spotifyAuthentication = require('../../spotify-authentication');
 const users = require('./usersController');
+var asyncPolling = require('async-polling');
+const request = require('request');
+
+const spotifyBaseUrl = "https://api.spotify.com/v1/";
+
+var polling = asyncPolling(function(req, res){
+
+	var result = {};
+
+	// get Spotify access token for authentication
+	var spotify_access_token_promise = spotifyAuthentication.getAccessTokenForPolling();
+
+	// When the access token is given
+	spotify_access_token_promise.then(async function(spotify_access_token){
+
+		var allArtistsIds = await mongoConnection.queryFromMongoDBProjection("Artists", {"images": {$exists: false}}, 20000, {"id": 1});
+
+		for (i=0; i < allArtistsIds.length; i++){
+			
+			// parameters of HTTP get request to query random tracks from Spotify
+			var getSearchTrackParameters = {
+				url: (spotifyBaseUrl + "artists/" + allArtistsIds[i].id),
+				headers: {
+					'Authorization': 'Bearer ' + spotify_access_token
+				},
+				json: true
+			};
+
+			await sleep(1000);
+			// Invoke the web request
+			request.get(getSearchTrackParameters, async function (error, response, body) {
+				// if the result is OK
+				if (!error && response.statusCode === 200) {
+					mongoConnection.updateMongoDB("Artists", {"id": body.id}, {"images": body.images});
+
+					console.log("Updated artist " + body.id)
+				}
+				else {
+					//end(error);
+					console.log("not found");
+
+					return;
+				}								
+			});
+		}
+	}, function(err){
+		console.log(err);
+	})
+
+}, 25000);
+
+function sleep(ms) {
+	return new Promise(resolve => {
+		setTimeout(resolve, ms)
+	})
+}
 
 // Get all artists from DB
 async function getAllArtists(req, res) {
@@ -183,6 +240,7 @@ async function GetTopArtists(req, res) {
 
 
 module.exports = {
+	//artistsPolling: polling.run(),
 	getAllArtists: getAllArtists,
 	AddNewArtist: AddNewArtist,
 	GetArtistById: GetArtistById,

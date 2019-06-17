@@ -66,6 +66,10 @@ module.exports = function(app) {
   app.route('/tracks/unlike/')
       .post(tracksController.UnlikeTrackById);
 
+  app.route('/tracks/artist/:artistId').get(async function(req, res){
+    await tracksController.getTracksByArtistId(req, res);
+  });
+
   app.route('/tracks/similar/:trackId')
       .get(tracksController.GetSimilarTracksById);
 

@@ -20,8 +20,8 @@ var polling = asyncPolling(function(req, res){
 	var spotify_access_token_promise = spotifyAuthentication.getAccessTokenForPolling();
 
 	// random key search letter from a constant array
-	//keyLetter = searchKeys[Math.floor(Math.random()*searchKeys.length)];
-	keyLetter = 'a';
+	keyLetter = searchKeys[Math.floor(Math.random()*searchKeys.length)];
+	//keyLetter = 'a';
 
 	// When the access token is given
 	spotify_access_token_promise.then(async function(spotify_access_token){
@@ -364,6 +364,16 @@ async function GetTrackByName(req, res){
 	res.status(200).send(trackResult);
 }
 
+async function getTracksByArtistId(req, res){
+		var tracks = await mongoConnection.queryFromMongoDB("Tracks", {'artists': {
+			$elemMatch: {
+					'id': req.params.artistId
+			}
+		}});
+
+		res.status(200).send(tracks);
+}
+
 // tracks/top/trackId
 async function GetTopTracks(req, res) {
 	let limit = 10;
@@ -392,6 +402,7 @@ async function GetTopTracks(req, res) {
 
 module.exports = {
 	//tracksPolling: polling.run(),
+	getTracksByArtistId: getTracksByArtistId,
 	getAllTracks: getAllTracks,
 	AddNewTrack: AddNewTrack,
 	GetTrackById: GetTrackById,
