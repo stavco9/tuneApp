@@ -39,11 +39,19 @@ module.exports = function(app) {
   });
   //.post(tracksController.AddNewAudioFeature);
 
+  app.route('/tracks/top/:limit').get(async function(req, res){
+    await tracksController.GetTopTracks(req, res);
+  });
+
   app.route('/tracks/:trackId')
     .get(tracksController.GetTrackById)
     .put(tracksController.UpdateTrackById)
     .delete(tracksController.DeleteTrackById);
 
+  app.route('/tracks/find/:trackName').get(async function(req, res){
+    await tracksController.GetTrackByName(req, res);
+  });
+    
   // Body format for POST request
   //{
   //  "trackId": "dsgkkld"
@@ -57,6 +65,10 @@ module.exports = function(app) {
   //}
   app.route('/tracks/unlike/')
       .post(tracksController.UnlikeTrackById);
+
+  app.route('/tracks/artist/:artistId').get(async function(req, res){
+    await tracksController.getTracksByArtistId(req, res);
+  });
 
   app.route('/tracks/similar/:trackId')
       .get(tracksController.GetSimilarTracksById);

@@ -1,8 +1,64 @@
 //'use strict';
 
-var spotifyAuthentication = require('../../spotify-authentication');
 const mongoConnection = require('../../mongo-connection');
-const request = require('request'); // "Request" library
+const spotifyAuthentication = require('../../spotify-authentication');
+const users = require('./usersController');
+var asyncPolling = require('async-polling');
+const request = require('request');
+
+const spotifyBaseUrl = "https://api.spotify.com/v1/";
+
+var polling = asyncPolling(function(req, res){
+
+	var result = {};
+
+	// get Spotify access token for authentication
+	var spotify_access_token_promise = spotifyAuthentication.getAccessTokenForPolling();
+
+	// When the access token is given
+	spotify_access_token_promise.then(async function(spotify_access_token){
+
+		var allArtistsIds = await mongoConnection.queryFromMongoDBProjection("Artists", {"images": {$exists: false}}, 20000, {"id": 1});
+
+		for (i=0; i < allArtistsIds.length; i++){
+			
+			// parameters of HTTP get request to query random tracks from Spotify
+			var getSearchTrackParameters = {
+				url: (spotifyBaseUrl + "artists/" + allArtistsIds[i].id),
+				headers: {
+					'Authorization': 'Bearer ' + spotify_access_token
+				},
+				json: true
+			};
+
+			await sleep(1000);
+			// Invoke the web request
+			request.get(getSearchTrackParameters, async function (error, response, body) {
+				// if the result is OK
+				if (!error && response.statusCode === 200) {
+					mongoConnection.updateMongoDB("Artists", {"id": body.id}, {"images": body.images});
+
+					console.log("Updated artist " + body.id)
+				}
+				else {
+					//end(error);
+					console.log("not found");
+
+					return;
+				}								
+			});
+		}
+	}, function(err){
+		console.log(err);
+	})
+
+}, 25000);
+
+function sleep(ms) {
+	return new Promise(resolve => {
+		setTimeout(resolve, ms)
+	})
+}
 
 // Get all artists from DB
 async function getAllArtists(req, res) {
@@ -49,126 +105,125 @@ var arrayUnique = function (arr) {
 	});
 };
 
-// Saves a new artist, exposed at POST /artists
 function LikeArtistById(req, res) {
-	var artistResult = mongoConnection.queryFromMongoDB('Artists', {'id': req.body.artistId});
-	artistResult.then(async function (result) {
-		if (result.length < 1) {
-			res.status(404).send('The artist with the ID ' + req.body.artistId + " was not found!");
+	users.userDevMode(req);
+	let user = users.GetUserInfo(req);
+
+	user.then(user =>{
+		if(user == null) {
+			res.status(401).send('You are unauthorized! Please login!');
 		}
-		else {
-			//if (req.session.token == null){
-			//	res.status(401).send('You are unauthorized! Please login!');
-			//}
-			//else{
-				//var email = req.session.token.email;
+		else{
 
-				// REPLACE THE EMAIL WITH req.session.token.email IT SHOULD WORK IF YOU'RE USING A REAL WEB APP!
-				var user = await mongoConnection.queryFromMongoDB('users', {'email': 'stavco9@gmail.com'});
-				//var user = await mongoConnection.queryFromMongoDB('users', {'email': email});
-
-				var likedArtists = user[0].likedArtists;
-				if (likedArtists === undefined) {
-					likedArtists = [];
+			var artistResult = mongoConnection.queryFromMongoDB('Artists', {'id': req.body.artistId});
+			artistResult.then(async function (result) {
+				if (result.length < 1) {
+					res.status(404).send('The artist with the ID ' + req.body.artistId + " was not found!");
 				}
-
-				var unlikedArtists = user[0].unlikedArtists;
-				if (unlikedArtists === undefined) {
-					unlikedArtists = [];
+				else {
+					var likedArtists = user.likedArtists;
+					if (likedArtists === undefined) {
+						likedArtists = [];
+					}
+	
+					var unlikedArtists = user.unlikedArtists;
+					if (unlikedArtists === undefined) {
+						unlikedArtists = [];
+					}
+	
+					var length = likedArtists.length;
+					likedArtists.push(req.body.artistId);
+					likedArtists = arrayUnique(likedArtists);
+					
+					// Add the artist to the liked artists
+					if (length !== likedArtists.length) {
+						if (result[0].likes === undefined) { result[0].likes = 0; }
+	
+						result[0].likes++;
+						await mongoConnection.updateMongoDB('Artists', {'id': req.body.artistId}, {likes: result[0].likes});
+					}
+	
+					// Remove the liked artist from the unlike artists if exists
+					var index = unlikedArtists.indexOf(req.body.artistId);
+					if (index > -1) {
+						unlikedArtists.splice(index, 1);
+						if (result[0].unlikes === undefined) { result[0].unlikes = 1; }
+						result[0].unlikes--;
+						await mongoConnection.updateMongoDB('Artists', {'id': req.body.artistId}, {unlikes: result[0].unlikes});
+					}
+	
+					res.status(200).send('Liked artist ' + req.body.artistId);
+	
+					mongoConnection.updateMongoDB('users', {'email': user.email}, {likedArtists: likedArtists, unlikedArtists: unlikedArtists});
 				}
-
-				var length = likedArtists.length;
-				likedArtists.push(req.body.artistId);
-				likedArtists = arrayUnique(likedArtists);
-				
-				// Add the artist to the liked artists
-				if (length !== likedArtists.length) {
-					if (result[0].likes === undefined) { result[0].likes = 0; }
-
-					result[0].likes++;
-					await mongoConnection.updateMongoDB('Artists', {'id': req.body.artistId}, {likes: result[0].likes});
-				}
-
-				// Remove the liked artist from the unlike artists if exists
-				var index = unlikedArtists.indexOf(req.body.artistId);
-				if (index > -1) {
-					unlikedArtists.splice(index, 1);
-					if (result[0].unlikes === undefined) { result[0].unlikes = 1; }
-					result[0].unlikes--;
-					await mongoConnection.updateMongoDB('Artists', {'id': req.body.artistId}, {unlikes: result[0].unlikes});
-				}
-
-				// REPLACE THE EMAIL WITH req.session.token.email IT SHOULD WORK IF YOU'RE USING A REAL WEB APP!
-				//await mongoConnection.updateMongoDB('users', {'email': email}, {likedArtists: likedArtists});
-				await mongoConnection.updateMongoDB('users', {'email': "stavco9@gmail.com"}, {likedArtists: likedArtists, unlikedArtists: unlikedArtists});
-
-				res.status(200).send('Liked artist ' + req.body.artistId);
-			//}
+			});
 		}
-	});
+	})
 }
 
 // Saves a new artist, exposed at POST /artists
 function UnlikeArtistById(req, res) {
-	var artistResult = mongoConnection.queryFromMongoDB('Artists', {'id': req.body.artistId});
-	artistResult.then(async function (result) {
-		if (result.length < 1) {
-			res.status(404).send('The artist with the ID ' + req.body.artistId + " was not found!");
+	users.userDevMode(req);
+
+	let user = users.GetUserInfo(req);
+
+	user.then(user => {
+		if(user == null) {
+			res.status(401).send('You are unauthorized! Please login!');
 		}
-		else {
-			//if (req.session.token == null){
-			//	res.status(401).send('You are unauthorized! Please login!');
-			//}
-			//else{
-				//var email = req.session.token.email;
+		else{
 
-				// REPLACE THE EMAIL WITH req.session.token.email IT SHOULD WORK IF YOU'RE USING A REAL WEB APP!
-				var user = await mongoConnection.queryFromMongoDB('users', {'email': 'stavco9@gmail.com'});
-				//var user = await mongoConnection.queryFromMongoDB('users', {'email': email});
-
-				if (user.length < 1) {
-					res.status(401).send('You are unauthorized! Please login!');
+			var artistResult = mongoConnection.queryFromMongoDB('Artists', {'id': req.body.artistId});
+			artistResult.then(async function (result) {
+				if (result.length < 1) {
+					res.status(404).send('The artist with the ID ' + req.body.artistId + " was not found!");
 				}
-
-				var unlikedArtists = user[0].unlikedArtists;
-				if (unlikedArtists === undefined) {
-					unlikedArtists = [];
+				else {
+					var likedArtists = user.likedArtists;
+					if (likedArtists === undefined) {
+						likedArtists = [];
+					}
+	
+					var unlikedArtists = user.unlikedArtists;
+					if (unlikedArtists === undefined) {
+						unlikedArtists = [];
+					}
+	
+					var length = unlikedArtists.length;
+					unlikedArtists.push(req.body.artistId);
+					unlikedArtists = arrayUnique(unlikedArtists);
+						
+					// Add the artist to the unliked artists
+					if (length !== unlikedArtists.length) {
+						if (result[0].unlikes === undefined) { result[0].unlikes = 0; }
+	
+						result[0].unlikes++;
+						await mongoConnection.updateMongoDB('Artists', {'id': req.body.artistId}, {unlikes: result[0].unlikes});
+					}
+	
+					// Remove the unliked artist from the liked artists if exists
+					var index = likedArtists.indexOf(req.body.artistId);
+					if (index > -1) {
+						likedArtists.splice(index, 1);
+						if (result[0].likes === undefined) { result[0].likes = 1; }
+						result[0].likes--;
+						await mongoConnection.updateMongoDB('Artists', {'id': req.body.artistId}, {likes: result[0].likes});
+					}
+	
+					res.status(200).send('unliked artist ' + req.body.artistId);
+	
+					mongoConnection.updateMongoDB('users', {'email': user.email}, {likedArtists: likedArtists, unlikedArtists: unlikedArtists});
 				}
-
-				var likedArtists = user[0].likedArtists;
-				if (likedArtists === undefined) {
-					likedArtists = [];
-				}
-
-				var length = unlikedArtists.length;
-				unlikedArtists.push(req.body.artistId);
-				unlikedArtists = arrayUnique(unlikedArtists);
-				
-				// Add the artist to the unliked artists
-				if (length !== unlikedArtists.length) {
-					if (result[0].unlikes === undefined) { result[0].unlikes = 0; }
-
-					result[0].unlikes++;
-					await mongoConnection.updateMongoDB('Artists', {'id': req.body.artistId}, {unlikes: result[0].unlikes});
-				}
-
-				// Remove the unliked artist from the liked artists if exists
-				var index = likedArtists.indexOf(req.body.artistId);
-				if (index > -1) {
-					likedArtists.splice(index, 1);
-					if (result[0].likes === undefined) { result[0].likes = 1; }
-					result[0].likes--;
-					await mongoConnection.updateMongoDB('Artists', {'id': req.body.artistId}, {likes: result[0].likes});
-				}
-
-				// REPLACE THE EMAIL WITH req.session.token.email IT SHOULD WORK IF YOU'RE USING A REAL WEB APP!
-				//await mongoConnection.updateMongoDB('users', {'email': email}, {unlikedArtists: unlikedArtists});
-				await mongoConnection.updateMongoDB('users', {'email': "stavco9@gmail.com"}, {unlikedArtists: unlikedArtists, likedArtists: likedArtists});
-
-				res.status(200).send('unliked artist ' + req.body.artistId);
-			//}
+			});
 		}
-	});
+	})
+}
+
+async function GetArtistsByName(req, res){
+
+	var artistResult = await mongoConnection.queryFromMongoDB("Artists", {"name": new RegExp(req.params.artistName, "i")});
+
+	res.status(200).send(artistResult);
 }
 
 // artists/top/artistId
@@ -185,6 +240,7 @@ async function GetTopArtists(req, res) {
 
 
 module.exports = {
+	//artistsPolling: polling.run(),
 	getAllArtists: getAllArtists,
 	AddNewArtist: AddNewArtist,
 	GetArtistById: GetArtistById,
@@ -192,5 +248,6 @@ module.exports = {
 	DeleteArtistById: DeleteArtistById,
 	LikeArtistById: LikeArtistById,
 	UnlikeArtistById: UnlikeArtistById,
+	GetArtistsByName, GetArtistsByName,
 	GetTopArtists: GetTopArtists
 };

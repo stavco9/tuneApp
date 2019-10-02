@@ -4,9 +4,9 @@ const mongoConnection = require('../../mongo-connection');
 var asyncPolling = require('async-polling');
 const request = require('request'); // "Request" library
 const reqPromise = require('request-promise');
-const usersController = require('./usersController');
+const users = require('./usersController');
 const searchKeys = [ 'a', 'e', 'i', 'o', 'u', 'er', 'ar', 'or', 'de', 'do' ];
-const { SimilarTracks } = require('../../MachineLearning/ml');
+const ml = require('../../MachineLearning/ml');
 
 const spotifyBaseUrl = "https://api.spotify.com/v1/";
 
@@ -20,8 +20,8 @@ var polling = asyncPolling(function(req, res){
 	var spotify_access_token_promise = spotifyAuthentication.getAccessTokenForPolling();
 
 	// random key search letter from a constant array
-	//keyLetter = searchKeys[Math.floor(Math.random()*searchKeys.length)];
-	keyLetter = 'a';
+	keyLetter = searchKeys[Math.floor(Math.random()*searchKeys.length)];
+	//keyLetter = 'a';
 
 	// When the access token is given
 	spotify_access_token_promise.then(async function(spotify_access_token){
@@ -167,20 +167,18 @@ function AddNewTrack(req, res) {
 }
 
 // Gets a single artist by ID, exposed at GET /artists/artistID
-function GetTrackById(req, res) {
+async function GetTrackById(req, res) {
 	if (req.params.trackId === 'top') {
-		GetTopTracks(req, res);
+		await GetTopTracks(req, res);
 	}
 	else {
-		var trackResult = mongoConnection.queryFromMongoDBJoin('Tracks', 'AudioFeatures', 'id', 'id', {'id': req.params.trackId});
+		var trackResult = await mongoConnection.queryFromMongoDBJoin('Tracks', 'AudioFeatures', 'id', 'id', {'id': req.params.trackId});
 
-		trackResult.then(function (result) {
-			if (result.length < 1) {
-				res.status(404).send('The track with the ID ' + req.params.trackId + " was not found!");
-			} else {
-				res.json(result);
-			}
-		});
+		if (trackResult.length < 1) {
+			res.status(404).send('The track with the ID ' + req.params.trackId + " was not found!");
+		} else {
+			res.json(trackResult);
+		}
 	}
 
 }
@@ -203,166 +201,177 @@ var arrayUnique = function (arr) {
 
 // Saves a new artist, exposed at POST /artists
 function LikeTrackById(req, res) {
-	var trackResult = mongoConnection.queryFromMongoDB('Tracks', {'id': req.body.trackId});
-	trackResult.then(async function (result) {
-		if (result.length < 1) {
-			res.status(404).send('The track with the ID ' + req.body.trackId + " was not found!");
+	users.userDevMode(req);
+	let user = users.GetUserInfo(req, true);
+
+	user.then(user =>{
+		if(user == null) {
+			res.status(401).send('You are unauthorized! Please login!');
 		}
-		else {
-			//if (req.session.token == null){
-			//	res.status(401).send('You are unauthorized! Please login!');
-			//}
-			//else{
-				//var email = req.session.token.email;
-
-				// REPLACE THE EMAIL WITH req.session.token.email IT SHOULD WORK IF YOU'RE USING A REAL WEB APP!
-				var user = await mongoConnection.queryFromMongoDB('users', {'email': 'stavco9@gmail.com'});
-				//var user = await mongoConnection.queryFromMongoDB('users', {'email': email});
-
-				if (user.length < 1) {
-					res.status(401).send('You are unauthorized! Please login!');
+		else{
+			var trackResult = mongoConnection.queryFromMongoDBJoin("Tracks", "AudioFeatures", "id", "id", {"id": req.body.trackId});
+			trackResult.then(async function (result) {
+				if (result.length < 1) {
+					res.status(404).send('The track with the ID ' + req.body.trackId + " was not found!");
 				}
+				else {
+					var likedTracks = user.likedTracks;
+					if (likedTracks === undefined) {
+						likedTracks = [];
+					}
+		
+					if (req.body.hasOwnProperty('absolutely') && req.body.absolutely != "false" && req.body.absolutely != "0"){
+						var length = likedTracks.length;
+						likedTracks.push(req.body.trackId);
+						likedTracks = arrayUnique(likedTracks);
+						
+						// Add the track to the liked tracks
+						if (length !== likedTracks.length) {
+							if (result[0].likes === undefined) { result[0].likes = 0; }
+		
+							result[0].likes++;
+							await mongoConnection.updateMongoDB('Tracks', {'id': req.body.trackId}, {likes: result[0].likes});
+						}
+					}
+		
+					var unlikedTracks = user.unlikedTracks;
+					if (unlikedTracks === undefined) {
+						unlikedTracks = [];
+					}
+			
+					// Remove the liked track from the unlike tracksp if exists
+					var index = unlikedTracks.indexOf(req.body.trackId);
+					if (index > -1) {
+						unlikedTracks.splice(index, 1);
+						if (result[0].unlikes === undefined) { result[0].unlikes = 1; }
+						result[0].unlikes--;
+						await mongoConnection.updateMongoDB('Tracks', {'id': req.body.trackId}, {unlikes: result[0].unlikes});
+					}
+		
+					res.status(200).send('Liked track ' + req.body.trackId);
 
-				var likedTracks = user[0].likedTracks;
-				if (likedTracks === undefined) {
-					likedTracks = [];
+					const trainedNN = await ml.Recommendations.trainNN(user.neuralnetwork, result[0], true);
+					mongoConnection.updateMongoDB('users', {'email': user.email}, {'likedTracks': likedTracks, 'unlikedTracks': unlikedTracks, 'neuralnetwork': trainedNN});
 				}
-
-				var unlikedTracks = user[0].unlikedTracks;
-				if (unlikedTracks === undefined) {
-					unlikedTracks = [];
-				}
-
-				var length = likedTracks.length;
-				likedTracks.push(req.body.trackId);
-				likedTracks = arrayUnique(likedTracks);
-				
-				// Add the track to the liked tracks
-				if (length !== likedTracks.length) {
-					if (result[0].likes === undefined) { result[0].likes = 0; }
-
-					result[0].likes++;
-					await mongoConnection.updateMongoDB('Tracks', {'id': req.body.trackId}, {likes: result[0].likes});
-
-					await mongoConnection.updateMongoDB('AudioFeatures', {'id': req.body.trackId}, {likes: result[0].likes});
-				}
-
-				// Remove the liked track from the unlike tracksp if exists
-				var index = unlikedTracks.indexOf(req.body.trackId);
-				if (index > -1) {
-					unlikedTracks.splice(index, 1);
-					if (result[0].unlikes === undefined) { result[0].unlikes = 1; }
-					result[0].unlikes--;
-					await mongoConnection.updateMongoDB('Tracks', {'id': req.body.trackId}, {unlikes: result[0].unlikes});
-
-					await mongoConnection.updateMongoDB('AudioFeatures', {'id': req.body.trackId}, {unlikes: result[0].unlikes});
-				}
-
-				// REPLACE THE EMAIL WITH req.session.token.email IT SHOULD WORK IF YOU'RE USING A REAL WEB APP!
-				//await mongoConnection.updateMongoDB('users', {'email': email}, {likedTracks: likedTracks});
-				await mongoConnection.updateMongoDB('users', {'email': "stavco9@gmail.com"}, {likedTracks: likedTracks, unlikedTracks: unlikedTracks});
-
-				res.status(200).send('Liked track ' + req.body.trackId);
-			//}
-		}
-	});
+			});
+		}	
+	})
 }
 
 // Saves a new artist, exposed at POST /artists
 function UnlikeTrackById(req, res) {
-	var trackResult = mongoConnection.queryFromMongoDB('Tracks', {'id': req.body.trackId});
-	trackResult.then(async function (result) {
-		if (result.length < 1) {
-			res.status(404).send('The track with the ID ' + req.body.trackId + " was not found!");
-		}
-		else {
-			//if (req.session.token == null){
-			//	res.status(401).send('You are unauthorized! Please login!');
-			//}
-			//else{
-				//var email = req.session.token.email;
+	users.userDevMode(req);
+	let user = users.GetUserInfo(req, true);
 
-				// REPLACE THE EMAIL WITH req.session.token.email IT SHOULD WORK IF YOU'RE USING A REAL WEB APP!
-				var user = await mongoConnection.queryFromMongoDB('users', {'email': 'stavco9@gmail.com'});
-				//var user = await mongoConnection.queryFromMongoDB('users', {'email': email});
-
-				if (user.length < 1) {
-					res.status(401).send('You are unauthorized! Please login!');
-				}
-
-				var unlikedTracks = user[0].unlikedTracks;
-				if (unlikedTracks === undefined) {
-					unlikedTracks = [];
-				}
-
-				var likedTracks = user[0].likedTracks;
-				if (likedTracks === undefined) {
-					likedTracks = [];
-				}
-
-				var length = unlikedTracks.length;
-				unlikedTracks.push(req.body.trackId);
-				unlikedTracks = arrayUnique(unlikedTracks);
-
-				// Add the track to the unliked tracks
-				if (length !== unlikedTracks.length) {
-					if (result[0].unlikes === undefined) { result[0].unlikes = 0; }
-
-					result[0].unlikes++;
-					await mongoConnection.updateMongoDB('Tracks', {'id': req.body.trackId}, {unlikes: result[0].unlikes});
-
-					await mongoConnection.updateMongoDB('AudioFeatures', {'id': req.body.trackId}, {unlikes: result[0].unlikes});
-				}
-
-				// Remove the unliked track from the likes list if exists
-				var index = likedTracks.indexOf(req.body.trackId);
-				if (index > -1) {
-					likedTracks.splice(index, 1);
-					if (result[0].likes === undefined) { result[0].likes = 1; }
-					result[0].likes--;
-					await mongoConnection.updateMongoDB('Tracks', {'id': req.body.trackId}, {likes: result[0].likes});
-
-					await mongoConnection.updateMongoDB('AudioFeatures', {'id': req.body.trackId}, {likes: result[0].likes});
-				}
-				
-				// REPLACE THE EMAIL WITH req.session.token.email IT SHOULD WORK IF YOU'RE USING A REAL WEB APP!
-				await mongoConnection.updateMongoDB('users', {'email': 'stavco9@gmail.com'}, {likedTracks: likedTracks, unlikedTracks: unlikedTracks});
-				//await mongoConnection.updateMongoDB('users', {'email': email}, {likedTracks: likedTracks});
-
-				res.status(200).send('Unliked track ' + req.body.trackId);
-			//}
-		}
-	});
-}
-
-// MACHINE LEARNING !!!
-// LIOR CURRENTLY WORKING ON IT @@@@@@@@@@@@@@@@@@@@@@@@
-// DO NOT CHANGE IT @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-// in: trackId
-// out: [ { trackId, trackName, artistName } ]
-async function GetSimilarTracksById(req, res) {
-	let trackId = req.params.trackId;
-
-    let baseTrack = await mongoConnection.queryFromMongoDBJoin("Tracks", "AudioFeatures", "id", "id", {"id": trackId});
-
-	if (baseTrack.length < 1){
-		res.status(404).send("Track " + trackId + " was not found");
-	}
-	else{
-		if (req.session.token == null){
+	user.then(user =>{
+		if(user == null) {
 			res.status(401).send('You are unauthorized! Please login!');
 		}
 		else{
-			let  userId = req.session.token.email;
+			var trackResult = mongoConnection.queryFromMongoDBJoin("Tracks", "AudioFeatures", "id", "id", {"id": req.body.trackId});
+			trackResult.then(async function (result) {
+				if (result.length < 1) {
+					res.status(404).send('The track with the ID ' + req.body.trackId + " was not found!");
+				}
+				else {
+					var likedTracks = user.likedTracks;
+					if (likedTracks === undefined) {
+						likedTracks = [];
+					}
+	
+					var unlikedTracks = user.unlikedTracks;
+					if (unlikedTracks === undefined) {
+						unlikedTracks = [];
+					}
 
-			let preferredTracks = await usersController.GetPreferredTracksByUserId(userId, 1000);
-			let unfamilliarTracks = await usersController.GetUnfamilliarPopularTracksByUserId(userId, 1000);
-			let allTestedTracks = [...preferredTracks, ...unfamilliarTracks];
-		
-			res.status(200).send(await SimilarTracks.search(baseTrack[0], allTestedTracks));
+					if (req.body.hasOwnProperty('absolutely') && req.body.absolutely != "false" && req.body.absolutely != "0"){
+
+						var length = unlikedTracks.length;
+						unlikedTracks.push(req.body.trackId);
+						unlikedTracks = arrayUnique(unlikedTracks);
+						
+						// Add the track to the liked tracks
+						if (length !== unlikedTracks.length) {
+							if (result[0].unlikes === undefined) { result[0].unlikes = 0; }
+	
+							result[0].unlikes++;
+							await mongoConnection.updateMongoDB('Tracks', {'id': req.body.trackId}, {unlikes: result[0].unlikes});
+						}
+					}
+			
+					// Remove the liked track from the unlike tracksp if exists
+					var index = likedTracks.indexOf(req.body.trackId);
+					if (index > -1) {
+						likedTracks.splice(index, 1);
+						if (result[0].likes === undefined) { result[0].likes = 1; }
+						result[0].likes--;
+						await mongoConnection.updateMongoDB('Tracks', {'id': req.body.trackId}, {likes: result[0].likes});
+					}
+					
+					res.status(200).send('Unliked track ' + req.body.trackId);
+	
+					const trainedNN = await ml.Recommendations.trainNN(user.neuralnetwork, result[0], false);
+	
+					mongoConnection.updateMongoDB('users', {'email': user.email}, {'likedTracks': likedTracks, 'unlikedTracks': unlikedTracks, 'neuralnetwork': trainedNN});
+				}
+			});
 		}
-	}
+	})
+}
+
+// MACHINE LEARNING !!!
+// in: trackId
+// out: [ { trackId, trackName, artistName } ]
+async function GetSimilarTracksById(req, res) {
+	users.userDevMode(req);
+
+	let user = users.GetUserInfo(req, false);
+
+	user.then(async user =>{
+
+		if(user == null) {
+			res.status(401).send('You are unauthorized! Please login!');
+		}
+		else{
+			let trackId = req.params.trackId;
+
+			let baseTrack = await mongoConnection.queryFromMongoDBJoin("Tracks", "AudioFeatures", "id", "id", {"id": trackId});
+		
+			if (baseTrack.length < 1){
+				res.status(404).send("Track " + trackId + " was not found");
+			}
+			else{
+				//userId = user.email;
+	
+				let [preferredTracks, unfamilliarTracks] = await Promise.all([
+					users.GetPreferredTracksByUserId(user, 1000),
+					users.GetUnfamilliarPopularTracksByUserId(user, 1000)
+				]);
+				
+				let allTestedTracks = [...preferredTracks, ...unfamilliarTracks];
+				allTestedTracks = allTestedTracks.filter(t => t.id !== trackId);
+			
+				res.status(200).send(await ml.SimilarTracks.search(baseTrack[0], allTestedTracks));
+			}
+		}
+	})
+}
+
+async function GetTrackByName(req, res){
+
+	var trackResult = await mongoConnection.queryFromMongoDB("Tracks", {"name": new RegExp(req.params.trackName, "i")});
+
+	res.status(200).send(trackResult);
+}
+
+async function getTracksByArtistId(req, res){
+		var tracks = await mongoConnection.queryFromMongoDB("Tracks", {'artists': {
+			$elemMatch: {
+					'id': req.params.artistId
+			}
+		}});
+
+		res.status(200).send(tracks);
 }
 
 // tracks/top/trackId
@@ -371,14 +380,29 @@ async function GetTopTracks(req, res) {
 	if (req.params.limit !== undefined) {
 		limit = parseInt(req.params.limit);
 	}
-	var trackResult = mongoConnection.queryFromMongoDBSortedMax('Tracks', {}, {likes: -1}, limit);
-	trackResult.then(function (result) {
-		res.json(result);
+	var trackResult = await mongoConnection.queryFromMongoDBSortedMax('Tracks', {}, {popularity: -1}, limit);
+	
+	trackResult = trackResult.sort(function (a, b){
+		if (a.likes === undefined) {
+			return 1;
+		}
+		else if (b.likes === undefined) {
+			return -1;
+		}
+		else if (a.likes === b.likes) {
+			return 0;
+		}
+		else{
+			return a.likes < b.likes ? 1 : -1;
+		}
 	});
+
+	res.json(trackResult);
 }
 
 module.exports = {
 	//tracksPolling: polling.run(),
+	getTracksByArtistId: getTracksByArtistId,
 	getAllTracks: getAllTracks,
 	AddNewTrack: AddNewTrack,
 	GetTrackById: GetTrackById,
@@ -388,6 +412,7 @@ module.exports = {
 	AddNewAudioFeature: AddNewAudioFeature,
 	LikeTrackById: LikeTrackById,
 	UnlikeTrackById: UnlikeTrackById,
-    GetSimilarTracksById: GetSimilarTracksById,
+	GetSimilarTracksById: GetSimilarTracksById,
+	GetTrackByName, GetTrackByName,
 	GetTopTracks: GetTopTracks
 };

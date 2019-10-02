@@ -1,8 +1,8 @@
 const {PyMachine} = require('./PyMachine/pymachine');
 
-//let RecommendationsMachine_knn = new PyMachine(__dirname + '/pythonScripts/Recommendations_KNN.py');
-//let RecommendationsMachine_id3 = new PyMachine(__dirname + '/pythonScripts/Recommendations_ID3.py');
-//let RecommendationsMachine_nn = new PyMachine(__dirname + '/pythonScripts/Recommendations_NN.py');
+let RecommendationsMachine_knn = new PyMachine(__dirname + '/pythonScripts/Recommendations_KNN.py');
+let RecommendationsMachine_id3 = new PyMachine(__dirname + '/pythonScripts/Recommendations_ID3.py');
+let RecommendationsMachine_nn = new PyMachine(__dirname + '/pythonScripts/Recommendations_NN.py');
 let similarTracksMachine_knn = new PyMachine(__dirname + '/pythonScripts/similarTracks_KNN.py');
 
 // Function names are as follows:
@@ -42,18 +42,23 @@ async function classifyForRecommendedTracks_knn(familliarTracks, testedTracks) {
     let familliarTracksFeatures = familliarTracks.map((t) => {
         return ReformatAudioFeatures(t);
     });
+    let familliarTracksClassifications = familliarTracks.map((t) => {
+        return ReformatClassification(t);
+    });
     let testedTracksFeatures = testedTracks.map((t) => {
         return ReformatAudioFeatures(t);
     });
 
+    let classificationResult = await RecommendationsMachine_knn.run({
+        'X': familliarTracksFeatures,
+        'y': familliarTracksClassifications,
+        'T': testedTracksFeatures
+    });
+
     let recommendations = [];
-    testedTracks.forEach(async (t, i) => {
-        let isRecommended = await RecommendationsMachine_knn.run({
-            'y': testedTracksFeatures[i],
-		    'X': familliarTracksFeatures
-        });
-        if(isRecommended) {
-            recommendations.push(t);
+    classificationResult.forEach((r, i) => {
+        if(r === 1) {
+            recommendations.push(testedTracks[i]);
         }
     });
 
@@ -94,18 +99,23 @@ async function classifyForRecommendedTracks_id3(familliarTracks, testedTracks) {
     let familliarTracksFeatures = familliarTracks.map((t) => {
         return ReformatAudioFeatures(t);
     });
+    let familliarTracksClassifications = familliarTracks.map((t) => {
+        return ReformatClassification(t);
+    });
     let testedTracksFeatures = testedTracks.map((t) => {
         return ReformatAudioFeatures(t);
     });
 
+    let classificationResult = await RecommendationsMachine_id3.run({
+        'X': familliarTracksFeatures,
+        'y': familliarTracksClassifications,
+        'T': testedTracksFeatures
+    });
+
     let recommendations = [];
-    testedTracks.forEach(async (t, i) => {
-        let isRecommended = await RecommendationsMachine_id3.run({
-            'y': testedTracksFeatures[i],
-		    'X': familliarTracksFeatures
-        });
-        if(isRecommended) {
-            recommendations.push(t);
+    classificationResult.forEach((r, i) => {
+        if(r === 1) {
+            recommendations.push(testedTracks[i]);
         }
     });
 
@@ -143,17 +153,32 @@ async function classifyForRecommendedTracks_neuralnetwork(neuralNetwork, testedT
     });
 
     let recommendations = [];
-    testedTracks.forEach(async (t, i) => {
-        let isRecommended = await RecommendationsMachine_nn.run({
-            't': testedTracksFeatures[i],
+    for(let i = 0; i < testedTracks.length; i++) {
+        let classificationResult = await RecommendationsMachine_nn.run({
+            'X': testedTracksFeatures[i],
+            'y': '?',
 		    'nn': neuralNetwork
         });
-        if(isRecommended) {
-            recommendations.push(t);
+        if(classificationResult['p'] == 1) {
+            recommendations.push(testedTracks[i]);
         }
-    });
+    }
 
     return recommendations;
+}
+
+async function trainForRecommendedTrack_neuralnetwork(neuralNetwork, track, isLiked) {
+    neuralNetwork = ReformatNeuralNetwork(neuralNetwork);
+    let trackFeatures = ReformatAudioFeatures(track);
+    let trackClassification = isLiked ? 1 : 0;
+
+    let trainResults = await RecommendationsMachine_nn.run({
+        'X': trackFeatures,
+        'y': trackClassification,
+        'nn': neuralNetwork
+    });
+
+    return trainResults['nn'];
 }
 
 // =====   in:   =====
@@ -197,7 +222,7 @@ async function classifyForRecommendedTracks_all(neuralNetwork, familliarTracks, 
 
     results.forEach((arrOfRecommendedTracks) => {
         arrOfRecommendedTracks.forEach((r) => {
-            let track = testedTracks.find((t) => t.id === r.id)
+            let track = testedTracks.find((t) => t.id === r.id);
             if(track.recommendationsCounter === undefined) {
                 track.recommendationsCounter = 0;
             }
@@ -271,15 +296,28 @@ function ReformatAudioFeatures(track) {
 }
 
 function ReformatNeuralNetwork(nn) {
+    if(nn === undefined) {
+        nn = '?';
+    }
+
     return nn;
+}
+
+function ReformatClassification(track) {
+    if(track && track.scoreForUser && track.scoreForUser <= 0) {
+        return 0;
+    }
+
+    return 1;
 }
 
 module.exports = {
     Recommendations: {
-        classifyMultipleByKNN: classifyForRecommendedTracks_knn,
+        /*classifyMultipleByKNN: classifyForRecommendedTracks_knn,
         classifyMultipleByID3: classifyForRecommendedTracks_id3,
-        classifyMultipleByNN: classifyForRecommendedTracks_neuralnetwork,
-        classifyMultiple: classifyForRecommendedTracks_all
+        classifyMultipleByNN: classifyForRecommendedTracks_neuralnetwork,*/
+        classifyMultiple: classifyForRecommendedTracks_all,
+        trainNN: trainForRecommendedTrack_neuralnetwork
     },
     SimilarTracks: {
         search: SearchForSimilarTracks_knn

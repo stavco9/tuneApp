@@ -21,11 +21,15 @@ module.exports = function(app) {
   app.route('/users/my')
     .get(async function(req, res){
      await usersController.getMyDetails(req, res);
-    });
+    })
 
     app.route('/users/userexist')
-        .post(usersController.DoesUserExist);
+      .post(async function(req, res){
+        await usersController.DoesUserExist(req, res)
+      });
 
-    app.route('/users/register')
-        .post(usersController.RegisterUser);
+     app.route('/users/register')
+    .post(async function(req, res){
+      await usersController.RegisterUser(req, res)
+    });
 };

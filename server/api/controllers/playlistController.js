@@ -1,12 +1,9 @@
 //'use strict';
-var spotifyAuthentication = require('../../spotify-authentication');
 const mongoConnection = require('../../mongo-connection');
 var usersController  = require('./usersController');
-var asyncPolling = require('async-polling');
-const request = require('request'); // "Request" library
-const reqPromise = require('request-promise');
 var moment = require('moment');
 const { Recommendations } = require('../../MachineLearning/ml');
+const { shuffleArray } = require('../models/helperFunctions');
 
 function getDate(){
 		
@@ -22,7 +19,7 @@ function getDate(){
 
 	var seconds = today.getSeconds();
 
-	var date = today.getFullYear()+'-' + (month < 10 ? '0' + month: month)  + '-' + (day < 10 ? '0' + day: day);
+	var date = today.getFullYear() + '-' + (month < 10 ? '0' + month: month) + '-' + (day < 10 ? '0' + day: day);
 
 	var time = (hours < 10 ? '0' + hours: hours) + '-' + (minutes < 10 ? '0' + minutes: minutes) + '-' + (seconds < 10 ? '0' + seconds: seconds);
 
@@ -30,86 +27,112 @@ function getDate(){
 }
 
 async function buildPlaylist(req, res){
+	usersController.userDevMode(req);
 
-	// In production, unmark all the comments of user details
-	//if (!req.session.token){
-	//	res.status(401).send('Unauthorized !! Please login');
-	//}
-	//else{
+	let user = usersController.GetUserInfo(req, true);
 
-		userId = "stavco9@gmail.com";
+	user.then(async user =>{
+		if (user == null){
+			res.status(401).send('Unauthorized !! Please login');
+		}
+		else{
+			userId = user.email;
 
-		let [familliarTracks, unfamilliarTracks, userPreferencesNN] = await Promise.all([
-			usersController.GetFamilliarTracksByUserId(userId),
-			usersController.GetUnfamilliarPopularTracksByUserId(userId),
-			usersController.GetPreferencesNN(userId)
-		]);
+			let [familliarTracks, unfamilliarTracks, userPreferencesNN] = await Promise.all([
+				usersController.GetFamilliarTracksByUserId(user),
+				usersController.GetUnfamilliarPopularTracksByUserId(user),
+				usersController.GetPreferencesNN(user)
+			]);
 
-		return Recommendations.classifyMultiple(userPreferencesNN, familliarTracks, unfamilliarTracks);
-	//}
+			let preferredTracks = usersController.GetPreferredTracksUsingFamilliarTracks(familliarTracks);
+			let recommendedTracks = await Recommendations.classifyMultiple(userPreferencesNN, familliarTracks, unfamilliarTracks);
+			
+			const playlistSize = 30;
+			const numOfPreferredTracksInPlaylist = Math.min(10, preferredTracks.length);
+
+			preferredTracks = preferredTracks.slice(0, numOfPreferredTracksInPlaylist);
+			recommendedTracks = recommendedTracks.slice(0, playlistSize - numOfPreferredTracksInPlaylist);
+			let playlist = [...preferredTracks, ...recommendedTracks];
+
+			if(playlist.length < playlistSize) {
+				playlist = playlist.concat(unfamilliarTracks.slice(0, playlistSize - playlist.length));
+			}
+
+			playlist = shuffleArray(playlist);
+
+			try{
+				res.status(200).send(playlist);
+			}
+			catch{
+				res.status(500).send("Internal server error");
+			}
+		}
+	});
 }
 
 async function listenPlaylist(req, res){
-	
-	// In production, unmark all the comments of user details
-	//if (!req.session.token){
-	//	res.status(401).send('Unauthorized !! Please login');
-	//}
-	//else{
+	usersController.userDevMode(req);
 
-		var currentTime = getDate();
+	let user = usersController.GetUserInfo(req, true);
 
-		var startListeningTime = moment(req.body.startListeningTime, 'YYYY-MM-DD HH:mm:ss');
+	user.then(async user => {
 
-		var trackId = req.body.trackId;
-
-		var durationOfListening = moment(currentTime, 'YYYY-MM-DD HH:mm:ss').diff(startListeningTime, 'milliseconds');
-
-		var trackromDB = await mongoConnection.queryFromMongoDB('Tracks', {'id': trackId});
-
-		if(trackromDB.length < 1){
-			res.status(404).send("Track " + trackId + " not found");
+		if (!req.session.token){
+			res.status(401).send('Unauthorized !! Please login');
 		}
 		else{
-			var listeningPercent = (durationOfListening * 100 / trackromDB[0].duration_ms);
 
-			var score = (listeningPercent - 50) / 10;
+			var currentTime = getDate();
 
-			if (req.body.isSelectedByUser == "true"){
-				score += 1;
+			var startListeningTime = moment(req.body.startListeningTime, 'YYYY-MM-DD HH:mm:ss');
+
+			var trackId = req.body.trackId;
+
+			var durationOfListening = moment(currentTime, 'YYYY-MM-DD HH:mm:ss').diff(startListeningTime, 'milliseconds');
+
+			//var trackromDB = await mongoConnection.queryFromMongoDB('Tracks', {'id': trackId});
+
+			var trackFromDB = await mongoConnection.queryFromMongoDBJoin('Tracks', 'AudioFeatures', 'id', 'id', {'id': trackId}, 1);
+
+			if(trackFromDB.length < 1){
+				res.status(404).send("Track " + trackId + " not found");
 			}
+			else{
+				var listeningPercent = (durationOfListening * 100 / 30000);//trackFromDB[0].duration_ms);
 
-			var listeningData = {
-				trackId: req.body.trackId,
-				email: "stavco9@gmail.com",
-				//email: req.session.token.email,
-				dateTime: currentTime,
-				duration: durationOfListening,
-				listeningPercent: listeningPercent,
-				score: score,
-				isListened: req.body.isListened,
-				isSelectedByUser: req.body.isSelectedByUser
-			};
-	
-			try{
-				await mongoConnection.addToMongoDB('ListeningAndSuggestions', listeningData);
+				var score = (listeningPercent - 50) / 10;
 
-				//res.status(200).send(listeningData);
+				if (req.body.isSelectedByUser == "true"){
+					score += 1;
+				}
+
+				var listeningData = {
+					trackId: req.body.trackId,
+					email: req.session.token.email,
+					dateTime: currentTime,
+					duration: durationOfListening,
+					listeningPercent: listeningPercent,
+					score: score,
+					isListened: req.body.isListened,
+					isSelectedByUser: req.body.isSelectedByUser
+				};
+
+				try{
+					await mongoConnection.addToMongoDB('ListeningAndSuggestions', listeningData);
+
+					const trainedNN = await Recommendations.trainNN(user.neuralnetwork, trackFromDB[0], score > 0 ? true : false)
+
+					await mongoConnection.updateMongoDB('users', {'email': user.email}, {'neuralnetwork': trainedNN});
+				}
+				catch{
+					res.status(500).send("Error while processing this request");	
+				}
+		
+				res.status(200).send("success");
 			}
-			catch{
-				res.status(500).send("Error while processing this request");	
-			}
-	
-			res.status(200).send("success");
 		}
-	//}
+	})
 }
-
-var arrayUnique = function (arr) {
-	return arr.filter(function(item, index){
-		return arr.indexOf(item) >= index;
-	});
-};
 
 module.exports = {
 	buildPlaylist: buildPlaylist,

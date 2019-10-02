@@ -1,7 +1,7 @@
 import sys
 import json
-from sklearn.neighbors import NearestNeighbors
 import numpy as np
+from sklearn.neighbors import NearestNeighbors
 
 while True:
     j = json.loads(sys.stdin.readline())
@@ -11,3 +11,15 @@ while True:
     result = nbrs.kneighbors([y],return_distance=False)
     print((','.join((''.join(str(e) for e in result)).split())).replace('[,','['))
     sys.stdout.flush()
+
+#//                              
+#//     `7MMF'      `7MMF' .g8""8q. `7MM"""Mq.  
+#//       MM          MM .dP'    `YM. MM   `MM. 
+#//       MM          MM dM'      `MM MM   ,M9  
+#//       MM          MM MM        MM MMmmdM9   
+#//       MM      ,   MM MM.      ,MP MM  YM.   
+#//       MM     ,M   MM `Mb.    ,dP' MM   `Mb. 
+#//     .JMMmmmmMMM .JMML. `"bmmd"' .JMML. .JMM.
+#//
+#//                 lior21 @ Github
+#//

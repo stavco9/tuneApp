@@ -51,6 +51,10 @@ module.exports = function(app) {
   app.route('/artists/unlike/')
       .post(artistsController.UnlikeArtistById);
 
+  app.route('/artists/find/:artistName').get(async function(req, res){
+    await artistsController.GetArtistsByName(req, res);
+  });
+
   //app.route('/artists/similar/:artistId')
       //.get(artistsController.GetSimilarArtistsById);
 

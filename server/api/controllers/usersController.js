@@ -1,4 +1,5 @@
 const mongoConnection = require('../../mongo-connection');
+const {randomMergeArrays} = require('../models/helperFunctions');
 
 function GetUserIdFromReq(req) {
     return req && req.session && req.session.token && req.session.token.email;
@@ -14,8 +15,26 @@ async function GetLastActivitiesByUserId(userId, numOfActivities=300) {
     return (await mongoConnection.queryFromMongoDBSortedMax('ListeningAndSuggestions', {'email': userId}, {'_id': -1}, numOfActivities));
 }
 
-async function GetUserInfo(userId){
-    return (await mongoConnection.queryFromMongoDB('users', {'email': userId}))[0];
+async function GetUserInfo(req, getNeuralNetwork = false){
+    userDevMode(req);
+
+    if(req.session.token && req.session.token.email) {
+        const userId = req.session.token.email;
+        let user = [];
+
+        if(!getNeuralNetwork) {
+            user = (await mongoConnection.queryFromMongoDBProjection('users', {'email': userId}, 1, {neuralnetwork: 0}));
+        }
+        else {
+            user = (await mongoConnection.queryFromMongoDB('users', {'email': userId}));
+        }
+
+        if(user.length > 0) {
+            return user[0];
+        }
+    }
+
+    return null;
 }
 
 // returns
@@ -28,20 +47,21 @@ async function GetUserInfo(userId){
 //          scoreForUser
 //      }
 // ]
-async function GetFamilliarTracksByUserId(userId, numOfActivities=300) {
+async function GetFamilliarTracksByUserId(user, numOfActivities=300) {
     let preferredTracks = {};
-    let lastActivities = (await GetLastActivitiesByUserId(userId, numOfActivities)).reverse();
+    let lastActivities = (await GetLastActivitiesByUserId(user.email, numOfActivities)).reverse();
     let likes = [];
     let unlikes = [];
-    let userInfo = await GetUserInfo(userId);
 
-    if (userInfo.hasOwnProperty('likedTracks')){
-        likes = userInfo.likedTracks;
-    }
-    if (userInfo.hasOwnProperty('unlikedTracks')){
-        unlikes = userInfo.unlikedTracks;
-    }
+    //let userInfo = await GetUserInfo(userId);
 
+    if (user.hasOwnProperty('likedTracks')){
+        likes = user.likedTracks;
+    }
+    if (user.hasOwnProperty('unlikedTracks')){
+        unlikes = user.unlikedTracks;
+    }
+    
     let scale = 1;
     lastActivities.forEach((act) => {
         scale += 0.01;
@@ -93,9 +113,10 @@ async function GetFamilliarTracksByUserId(userId, numOfActivities=300) {
 //         ...
 //     }
 // ]
-async function GetPreferredTracksByUserId(userId, numOfActivities=300) {
-    return ((await GetFamilliarTracksByUserId(userId, numOfActivities))
-        .filter(t => t.scoreForUser > 0));
+async function GetPreferredTracksByUserId(user, numOfActivities=300) {
+    return (GetPreferredTracksUsingFamilliarTracks(
+        await GetFamilliarTracksByUserId(user, numOfActivities)
+    ));
 }
 
 // =====   out:   =====
@@ -109,27 +130,133 @@ async function GetPreferredTracksByUserId(userId, numOfActivities=300) {
 //         ...
 //     }
 // ]
-async function GetUnfamilliarPopularTracksByUserId(userId, numOfActivities=1000) {
-    let familliar = await GetFamilliarTracksByUserId(userId, numOfActivities);
-    let popular = await mongoConnection.queryFromMongoDBJoinSort('Tracks', 'AudioFeatures', 'id', 'id', {}, familliar.length + 200, {'popularity': -1});
+function GetPreferredTracksUsingFamilliarTracks(familliarTracks) {
+    return (familliarTracks.filter(t => t.scoreForUser > 0));
+}
 
-    return popular.filter((p) => !familliar.some((f) => p.id == f.id));
+// =====   out:   =====
+// [
+//     {
+//         id (of track)
+//         name
+//         AudioFeatures: {
+//             ...
+//         }
+//         ...
+//     }
+// ]
+async function GetUnfamilliarPopularTracksByUserId(user, numOfActivities=1000, numOfTracks=100) {
+    let familliar = await GetFamilliarTracksByUserId(user, numOfActivities);
+    [popularWorldwide, popolarOfLikedArtists] = await Promise.all([
+        mongoConnection.queryFromMongoDBJoinSort('Tracks', 'AudioFeatures', 'id', 'id', {}, familliar.length + numOfTracks, {'popularity': -1}),
+        GetTracksByLikedArtists(user, familliar.length + numOfTracks)
+    ]);
+
+    let popular = randomMergeArrays(popularWorldwide, popolarOfLikedArtists);
+    return popular.filter((p,p_i) => {
+            return (popular.findIndex(f => f.id === p.id) === p_i) &&
+                   (!familliar.some(f => p.id == f.id))
+        }).slice(0, numOfTracks);
+}
+
+var arrayUnique = function (arr) {
+	return arr.filter(function(item, index){
+		return arr.indexOf(item) >= index;
+	});
+};
+
+async function GetTracksByLikedArtists(user, numOfTracks=1000){
+    if (user.hasOwnProperty('likedArtists') && user.likedArtists.length > 0){
+        return await mongoConnection.queryFromMongoDBJoinSort("Tracks", "AudioFeatures", "id", "id", {
+                'artists': {
+                    $elemMatch: {
+                        'id': {
+                            $in: user.likedArtists
+                        }
+                    }
+                }
+            }, numOfTracks, {'popularity': -1});
+    }
+
+    return [];
+}
+
+async function GetPreferencesNN(user) {
+    return (user.neuralnetwork);
+}
+
+function userDevMode(req) {
+    if(process.env.ENVIRONMENT_MODE == 'dev') {
+        req.session.token = {
+            email: 'stavco9@gmail.com'
+        }
+    }
 }
 
 async function getMyDetails(req, res){
+    userDevMode(req);
 
-    if (!req.session.token){
-        res.status(401).send("You are unauthorized !! Please login");
-    }
-    else{
-        var userDetails = await mongoConnection.queryFromMongoDB("users", {"email": req.session.token.email});
+    user = GetUserInfo(req, false);
 
-        res.status(200).send(userDetails);
-    }
+    user.then(user =>{ 
+        if (user == null){
+            res.status(401).send("You are unauthorized !! Please login");
+        }
+        else{
+            res.status(200).send(user);
+        }
+    })
 }
 
-async function GetPreferencesNN(userId) {
-    return ((await GetUserInfo(userId)).neuralnetwork);
+async function CheckIfUserExsits(user){
+
+    var answer = await mongoConnection.queryFromMongoDBProjection("users", {'email': user.email}, 1, {'neuralnetwork': 0});
+
+    if (answer.length > 0){
+        return true;
+    }
+
+    return false;
+}
+
+async function DoesUserExist(req, response) {
+    const user =  req.body.user;
+
+    var exists = await CheckIfUserExsits(user);
+
+    if (exists){
+        req.session.token = user;
+    }
+
+    response.status(200).send(exists);
+}
+
+async function RegisterUser(req, res) {
+    
+    var statusCode = 400;
+
+    if (req.body.hasOwnProperty("user")){
+        
+        statusCode = 200;
+
+        var userToAdd = {};
+
+        const user =  req.body.user;
+
+        user["likedTracks"] = [];
+        user["unlikedTracks"] = [];
+        user["likedArtists"] = [];
+        user["unlikedArtists"] = [];
+
+        if (!await CheckIfUserExsits(user)){
+            await mongoConnection.addToMongoDB("users", user);
+        }
+
+        res.status(statusCode).send(user);
+    }
+    else{
+        res.status(statusCode).send("Bad request");
+    }
 }
 
 function DoesUserExist(req, response) {
@@ -150,12 +277,16 @@ function RegisterUser(req, res) {
 }
 
 module.exports = {
-    getMyDetails: getMyDetails,
     GetFamilliarTracksByUserId: GetFamilliarTracksByUserId,
     GetUnfamilliarPopularTracksByUserId: GetUnfamilliarPopularTracksByUserId,
     GetPreferredTracksByUserId: GetPreferredTracksByUserId,
+    GetPreferredTracksUsingFamilliarTracks: GetPreferredTracksUsingFamilliarTracks,
     GetUserIdFromReq: GetUserIdFromReq,
+    GetTracksByLikedArtists: GetTracksByLikedArtists,
     GetPreferencesNN: GetPreferencesNN,
+    GetUserInfo: GetUserInfo,
+    userDevMode: userDevMode,
     DoesUserExist: DoesUserExist,
-    RegisterUser: RegisterUser
+    RegisterUser: RegisterUser,
+    getMyDetails: getMyDetails
 };
