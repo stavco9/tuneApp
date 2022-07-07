@@ -20,7 +20,7 @@
     "express": "^4.16.4",
     "express-session": "^1.16.1",
     "googleapis": "^37.2.0",
-    "moment": "^2.24.0",
+    "moment": "^2.29.4",
     "mongodb": "^3.2.3",
     "mongoose": "^5.5.8",
     "passport": "^0.4.0",
