@@ -9,7 +9,7 @@
   "dependencies": {
     "axios": "^0.18.0",
     "expo": "^32.0.6",
-    "expo-cli": "^2.4.3",
+    "expo-cli": "^6.0.8",
     "flow-bin": "^0.86.0",
     "native-base": "^2.12.1",
     "react": "^16.8.6",
